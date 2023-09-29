@@ -15,7 +15,8 @@ defmodule Jellygrinder.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {Jellygrinder.Application, []}
     ]
   end
 
@@ -23,6 +24,8 @@ defmodule Jellygrinder.MixProject do
 
   defp deps do
     [
+      {:finch, "~> 0.16.0"},
+      {:jellyfish_server_sdk, github: "jellyfish-dev/elixir_server_sdk"},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}
     ]
@@ -30,7 +33,8 @@ defmodule Jellygrinder.MixProject do
 
   defp dialyzer() do
     opts = [
-      flags: [:error_handling]
+      flags: [:error_handling],
+      plt_add_apps: [:mix]
     ]
 
     if System.get_env("CI") == "true" do
