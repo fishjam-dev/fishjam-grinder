@@ -2,6 +2,7 @@ defmodule Jellygrinder.LLClient do
   @moduledoc false
 
   use GenServer, restart: :temporary
+  alias Jellygrinder.LLClient.ConnectionManager
 
   @max_partial_request_count 12
   @max_single_partial_request_retries 3
@@ -18,21 +19,24 @@ defmodule Jellygrinder.LLClient do
   @impl true
   def init(opts) do
     master_manifest_uri = URI.parse(opts.url)
+    {:ok, conn_manager} = ConnectionManager.start_link(master_manifest_uri)
 
     state = %{
+      conn_manager: conn_manager,
       name: opts.name,
       parent: opts.parent,
-      base_uri: Map.update!(master_manifest_uri, :path, &Path.dirname/1),
+      base_url: master_manifest_uri |> Map.put(:path, "") |> URI.to_string(),
+      base_path: Path.dirname(master_manifest_uri.path),
       track_manifest_name: nil,
       latest_partial: nil
     }
 
-    {:ok, state, {:continue, {:get_master_manifest, master_manifest_uri}}}
+    {:ok, state, {:continue, {:get_master_manifest, master_manifest_uri.path}}}
   end
 
   @impl true
-  def handle_continue({:get_master_manifest, uri}, state) do
-    case request(uri, "master playlist", state.name, state.parent) do
+  def handle_continue({:get_master_manifest, path}, state) do
+    case request(path, "master playlist", state) do
       {:ok, master_manifest} ->
         send(self(), :get_new_partials)
         track_manifest_name = get_track_manifest_name(master_manifest)
@@ -47,7 +51,7 @@ defmodule Jellygrinder.LLClient do
   @impl true
   def handle_info(:get_new_partials, state) do
     latest_partial =
-      case request_track_manifest(state) do
+      case request(Path.join(state.base_path, state.track_manifest_name), "media playlist", state) do
         {:ok, track_manifest} ->
           track_manifest
           |> get_new_partials_info(state.latest_partial)
@@ -73,24 +77,12 @@ defmodule Jellygrinder.LLClient do
     {:noreply, state}
   end
 
-  defp request_track_manifest(state) do
-    state.base_uri
-    |> Map.update!(:path, &Path.join(&1, state.track_manifest_name))
-    |> request("media playlist", state.name, state.parent)
-  end
-
   defp request_partial(partial, state, retries \\ @max_single_partial_request_retries)
-
-  defp request_partial(partial, _state, 0) do
-    partial
-  end
+  defp request_partial(partial, _state, 0), do: partial
 
   defp request_partial(partial, state, retries) do
-    state.base_uri
-    |> Map.update!(:path, &Path.join(&1, partial.name))
-    |> request("media partial segment", state.name, state.parent)
-    |> case do
-      {:ok, _data} -> partial
+    case request(Path.join(state.base_path, partial.name), "media partial segment", state) do
+      {:ok, _content} -> partial
       {:error, _reason} -> request_partial(partial, state, retries - 1)
     end
   end
@@ -121,33 +113,32 @@ defmodule Jellygrinder.LLClient do
     |> Enum.at(1, manifest)
   end
 
-  defp request(url, label, process_name, parent) do
-    url = if(is_binary(url), do: url, else: URI.to_string(url))
-
+  defp request(path, label, state) do
     timestamp = get_current_timestamp_ms()
     start_time = System.monotonic_time()
-    maybe_response = Finch.build(:get, url) |> Finch.request(Jellygrinder.Finch)
+    maybe_response = ConnectionManager.get(state.conn_manager, path)
     end_time = System.monotonic_time()
 
     request_info = %{
       timestamp: timestamp,
       elapsed: System.convert_time_unit(end_time - start_time, :native, :millisecond),
       label: label,
-      process_name: process_name,
-      url: url
+      process_name: state.name,
+      url: state.base_url <> path
     }
 
-    {result, body} =
+    {result, data} =
       case maybe_response do
         {:ok, response} ->
           success = response.status == 200
+          data = Map.get(response, :data, "")
 
           {%{
              response_code: response.status,
              success: success,
-             failure_msg: if(success, do: "", else: response.body),
-             bytes: byte_size(response.body)
-           }, response.body}
+             failure_msg: if(success, do: "", else: data),
+             bytes: byte_size(data)
+           }, data}
 
         {:error, reason} ->
           {%{
@@ -158,9 +149,9 @@ defmodule Jellygrinder.LLClient do
            }, ""}
       end
 
-    send(parent, {:result, Map.merge(request_info, result)})
+    send(state.parent, {:result, Map.merge(request_info, result)})
 
-    {if(result.success, do: :ok, else: :error), body}
+    {if(result.success, do: :ok, else: :error), data}
   end
 
   defp get_current_timestamp_ms() do

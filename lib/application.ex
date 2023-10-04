@@ -7,7 +7,6 @@ defmodule Jellygrinder.Application do
   @impl true
   def start(_mode, _opts) do
     children = [
-      {Finch, name: Jellygrinder.Finch},
       ClientSupervisor,
       Coordinator
     ]

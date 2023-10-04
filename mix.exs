@@ -24,7 +24,8 @@ defmodule Jellygrinder.MixProject do
 
   defp deps do
     [
-      {:finch, "~> 0.16.0"},
+      {:mint, "~> 1.5"},
+      {:castore, "~> 1.0"},
       {:jellyfish_server_sdk, github: "jellyfish-dev/elixir_server_sdk"},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}
