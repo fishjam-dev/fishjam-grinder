@@ -14,14 +14,9 @@ defmodule Jellygrinder.ClientSupervisor do
     DynamicSupervisor.start_child(__MODULE__, {client_module, arg})
   end
 
-  @spec terminate_clients() :: :ok
-  def terminate_clients() do
-    DynamicSupervisor.which_children(__MODULE__)
-    |> Enum.each(fn {:undefined, pid, :worker, _modules} ->
-      DynamicSupervisor.terminate_child(__MODULE__, pid)
-    end)
-
-    :ok
+  @spec terminate() :: :ok
+  def terminate() do
+    DynamicSupervisor.stop(__MODULE__)
   end
 
   @impl true

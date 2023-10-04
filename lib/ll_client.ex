@@ -51,9 +51,8 @@ defmodule Jellygrinder.LLClient do
         {:ok, track_manifest} ->
           track_manifest
           |> get_new_partials_info(state.latest_partial)
-          |> Enum.reduce(state.latest_partial, fn partial, _acc ->
-            request_partial(partial, state)
-          end)
+          |> Enum.map(&request_partial(&1, state))
+          |> List.last(state.latest_partial)
 
         {:error, _response} ->
           state.latest_partial
@@ -87,14 +86,12 @@ defmodule Jellygrinder.LLClient do
   end
 
   defp request_partial(partial, state, retries) do
-    {status, _content} =
-      state.base_uri
-      |> Map.update!(:path, &Path.join(&1, partial.name))
-      |> request("media partial segment", state.name, state.parent)
-
-    case status do
-      :ok -> partial
-      :error -> request_partial(partial, state, retries - 1)
+    state.base_uri
+    |> Map.update!(:path, &Path.join(&1, partial.name))
+    |> request("media partial segment", state.name, state.parent)
+    |> case do
+      {:ok, _data} -> partial
+      {:error, _reason} -> request_partial(partial, state, retries - 1)
     end
   end
 
@@ -128,12 +125,13 @@ defmodule Jellygrinder.LLClient do
     url = if(is_binary(url), do: url, else: URI.to_string(url))
 
     timestamp = get_current_timestamp_ms()
+    start_time = System.monotonic_time()
     maybe_response = Finch.build(:get, url) |> Finch.request(Jellygrinder.Finch)
-    elapsed = get_current_timestamp_ms() - timestamp
+    end_time = System.monotonic_time()
 
     request_info = %{
       timestamp: timestamp,
-      elapsed: elapsed,
+      elapsed: System.convert_time_unit(end_time - start_time, :native, :millisecond),
       label: label,
       process_name: process_name,
       url: url

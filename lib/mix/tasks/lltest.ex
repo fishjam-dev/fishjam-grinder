@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Lltest do
           url: :string,
           clients: :integer,
           time: :integer,
+          spawn_interval: :integer,
           out_path: :string
         ]
       )

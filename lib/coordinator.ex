@@ -2,60 +2,11 @@ defmodule Jellygrinder.Coordinator do
   @moduledoc false
 
   use GenServer, restart: :temporary
+
   require Logger
+
   alias Jellygrinder.ClientSupervisor
-
-  defmodule Config do
-    @moduledoc false
-
-    @default_client_config [
-      server_address: "localhost:5002",
-      server_api_token: "development",
-      secure?: false
-    ]
-
-    @type client_config :: Jellyfish.Client.connection_options()
-    @type t :: %__MODULE__{
-            client_config: client_config(),
-            url: String.t() | nil,
-            clients: pos_integer(),
-            time: pos_integer(),
-            out_path: Path.t()
-          }
-
-    defstruct client_config: @default_client_config,
-              url: nil,
-              clients: 500,
-              time: 300,
-              out_path: "results.csv"
-
-    @spec fill_hls_url!(t()) :: t() | no_return()
-    def fill_hls_url!(%{url: nil} = config) do
-      client_config = Keyword.merge(@default_client_config, config.client_config)
-      client = Jellyfish.Client.new(client_config)
-
-      case Jellyfish.Room.get_all(client) do
-        {:ok, [room | _rest]} ->
-          protocol = if client_config[:secure?], do: "https", else: "http"
-
-          %{
-            config
-            | url: "#{protocol}://#{client_config[:server_address]}/hls/#{room.id}/index.m3u8"
-          }
-
-        {:ok, []} ->
-          raise "No rooms present on Jellyfish"
-
-        {:error, reason} ->
-          raise "Error communicating with Jellyfish: #{inspect(reason)}"
-      end
-    end
-
-    def fill_hls_url!(config), do: config
-  end
-
-  # in ms
-  @spawn_interval 200
+  alias Jellygrinder.Coordinator.Config
 
   @spec run_test(Config.t()) :: :ok | no_return()
   def run_test(config) do
@@ -64,7 +15,8 @@ defmodule Jellygrinder.Coordinator do
 
     receive do
       {:DOWN, ^ref, :process, _pid, reason} ->
-        Logger.info("Coordinator process exited with reason #{inspect(reason)}")
+        if reason != :normal,
+          do: Logger.error("Coordinator process exited with reason #{inspect(reason)}")
 
         :ok
     end
@@ -119,25 +71,26 @@ defmodule Jellygrinder.Coordinator do
   end
 
   @impl true
+  def handle_info(:spawn_client, %{client_count: max_clients, clients: max_clients} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(:spawn_client, %{client_count: client_count} = state) do
-    if client_count >= state.clients do
-      {:noreply, state}
-    else
-      Process.send_after(self(), :spawn_client, @spawn_interval)
-      name = "client-#{client_count}"
+    Process.send_after(self(), :spawn_client, state.spawn_interval)
+    name = "client-#{client_count}"
 
-      case ClientSupervisor.spawn_client(%{url: state.url, parent: self(), name: name}) do
-        {:ok, pid} ->
-          Logger.info("Coordinator: #{name} spawned at #{inspect(pid)}")
-          _ref = Process.monitor(pid)
+    case ClientSupervisor.spawn_client(%{url: state.url, parent: self(), name: name}) do
+      {:ok, pid} ->
+        Logger.info("Coordinator: #{name} spawned at #{inspect(pid)}")
+        _ref = Process.monitor(pid)
 
-          {:noreply, %{state | client_count: client_count + 1}}
+        {:noreply, %{state | client_count: client_count + 1}}
 
-        {:error, reason} ->
-          Logger.error("Coordinator: Error spawning #{name}: #{inspect(reason)}")
+      {:error, reason} ->
+        Logger.error("Coordinator: Error spawning #{name}: #{inspect(reason)}")
 
-          {:noreply, state}
-      end
+        {:noreply, state}
     end
   end
 
@@ -145,7 +98,7 @@ defmodule Jellygrinder.Coordinator do
   def handle_info(:end_test, %{results: results, out_path: out_path} = state) do
     Logger.info("Coordinator: End of test")
 
-    ClientSupervisor.terminate_clients()
+    ClientSupervisor.terminate()
 
     Logger.info("Coordinator: Generating report...")
 
@@ -169,7 +122,9 @@ defmodule Jellygrinder.Coordinator do
   end
 
   @impl true
-  def handle_info(_msg, state) do
+  def handle_info(msg, state) do
+    Logger.warning("Coordinator: Received unexpected message: #{inspect(msg)}")
+
     {:noreply, state}
   end
 
