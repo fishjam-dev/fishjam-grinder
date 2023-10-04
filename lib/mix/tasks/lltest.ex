@@ -27,7 +27,7 @@ defmodule Mix.Tasks.Lltest do
   # Available options
 
   * `--url <url>` - URL of the master HLS manifest. This can be inferred from Jellyfish, see below
-  * `--clients <count>` - Number of client connections will to simulate. Defaults to 500
+  * `--clients <count>` - Number of client connections to simulate. Defaults to 500
   * `--time <seconds>` - Duration of the test. Defaults to 300 seconds
   * `--spawn-interval <milliseconds>` - Interval at which to spawn new clients. Defaults to 200 milliseconds
   * `--out-path <path>` - Path to store the CSV with test results. Defaults to "results.csv"
