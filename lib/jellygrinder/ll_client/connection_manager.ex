@@ -5,6 +5,8 @@ defmodule Jellygrinder.LLClient.ConnectionManager do
 
   defstruct [:conn, requests: %{}]
 
+  @connection_opts [protocols: [:http2]]
+
   @spec start_link(URI.t()) :: GenServer.on_start()
   def start_link(uri) do
     GenServer.start_link(__MODULE__, uri)
@@ -17,7 +19,7 @@ defmodule Jellygrinder.LLClient.ConnectionManager do
 
   @impl true
   def init(uri) do
-    case Mint.HTTP.connect(String.to_atom(uri.scheme), uri.host, uri.port) do
+    case Mint.HTTP.connect(String.to_atom(uri.scheme), uri.host, uri.port, @connection_opts) do
       {:ok, conn} ->
         state = %__MODULE__{conn: conn}
         {:ok, state}

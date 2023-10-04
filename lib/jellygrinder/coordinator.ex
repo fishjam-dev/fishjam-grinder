@@ -49,10 +49,15 @@ defmodule Jellygrinder.Coordinator do
     Process.send_after(self(), :end_test, config.time * 1000)
     send(self(), :spawn_client)
 
-    state =
-      config
-      |> Map.from_struct()
-      |> Map.merge(%{client_count: 0, results: []})
+    state = %{
+      uri: URI.parse(config.url),
+      clients: config.clients,
+      time: config.time,
+      spawn_interval: config.spawn_interval,
+      out_path: config.out_path,
+      client_count: 0,
+      results: []
+    }
 
     {:reply, :ok, state}
   end
@@ -80,7 +85,7 @@ defmodule Jellygrinder.Coordinator do
     Process.send_after(self(), :spawn_client, state.spawn_interval)
     name = "client-#{client_count}"
 
-    case ClientSupervisor.spawn_client(%{url: state.url, parent: self(), name: name}) do
+    case ClientSupervisor.spawn_client(%{uri: state.uri, parent: self(), name: name}) do
       {:ok, pid} ->
         Logger.info("Coordinator: #{name} spawned at #{inspect(pid)}")
         _ref = Process.monitor(pid)
@@ -128,8 +133,12 @@ defmodule Jellygrinder.Coordinator do
     {:noreply, state}
   end
 
-  defp amend_result(result, %{client_count: client_count} = _state) do
-    Map.put(result, :client_count, client_count)
+  defp amend_result(result, %{client_count: client_count, uri: uri} = _state) do
+    request_url = uri |> Map.put(:path, result.path) |> URI.to_string()
+
+    result
+    |> Map.put(:client_count, client_count)
+    |> Map.put(:url, request_url)
   end
 
   defp results_header() do

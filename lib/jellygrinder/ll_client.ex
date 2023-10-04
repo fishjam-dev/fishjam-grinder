@@ -7,10 +7,9 @@ defmodule Jellygrinder.LLClient do
   @max_partial_request_count 12
   @max_single_partial_request_retries 3
 
-  # in ms
-  @default_wait_period 1000
+  @partials_per_segment 6
 
-  @spec start_link(%{url: String.t(), parent: GenServer.server(), name: String.t()}) ::
+  @spec start_link(%{uri: URI.t(), parent: GenServer.server(), name: String.t()}) ::
           GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts)
@@ -18,14 +17,13 @@ defmodule Jellygrinder.LLClient do
 
   @impl true
   def init(opts) do
-    master_manifest_uri = URI.parse(opts.url)
+    master_manifest_uri = opts.uri
     {:ok, conn_manager} = ConnectionManager.start_link(master_manifest_uri)
 
     state = %{
       conn_manager: conn_manager,
       name: opts.name,
       parent: opts.parent,
-      base_url: master_manifest_uri |> Map.put(:path, "") |> URI.to_string(),
       base_path: Path.dirname(master_manifest_uri.path),
       track_manifest_name: nil,
       latest_partial: nil
@@ -50,8 +48,11 @@ defmodule Jellygrinder.LLClient do
 
   @impl true
   def handle_info(:get_new_partials, state) do
+    path = Path.join(state.base_path, state.track_manifest_name)
+    query = create_track_manifest_query(state)
+
     latest_partial =
-      case request(Path.join(state.base_path, state.track_manifest_name), "media playlist", state) do
+      case request(path <> query, "media playlist", state) do
         {:ok, track_manifest} ->
           track_manifest
           |> get_new_partials_info(state.latest_partial)
@@ -62,12 +63,7 @@ defmodule Jellygrinder.LLClient do
           state.latest_partial
       end
 
-    wait_for =
-      if is_nil(latest_partial),
-        do: @default_wait_period,
-        else: floor(latest_partial.duration * 1000)
-
-    Process.send_after(self(), :get_new_partials, wait_for)
+    send(self(), :get_new_partials)
 
     {:noreply, %{state | latest_partial: latest_partial}}
   end
@@ -77,11 +73,31 @@ defmodule Jellygrinder.LLClient do
     {:noreply, state}
   end
 
+  defp create_track_manifest_query(%{latest_partial: nil} = _state), do: ""
+
+  defp create_track_manifest_query(%{latest_partial: latest_partial} = _state) do
+    [last_msn, last_part] =
+      latest_partial.name
+      |> then(
+        &Regex.run(~r/^muxed_segment_(\d+)_\w*_(\d+)_part.m4s$/, &1, capture: :all_but_first)
+      )
+      |> Enum.map(&String.to_integer/1)
+
+    {msn, part} =
+      if last_part == @partials_per_segment - 1,
+        do: {last_msn + 1, 0},
+        else: {last_msn, last_part + 1}
+
+    "?_HLS_msn=#{msn}&_HLS_part=#{part}"
+  end
+
   defp request_partial(partial, state, retries \\ @max_single_partial_request_retries)
   defp request_partial(partial, _state, 0), do: partial
 
   defp request_partial(partial, state, retries) do
-    case request(Path.join(state.base_path, partial.name), "media partial segment", state) do
+    path = Path.join(state.base_path, partial.name)
+
+    case request(path, "media partial segment", state) do
       {:ok, _content} -> partial
       {:error, _reason} -> request_partial(partial, state, retries - 1)
     end
@@ -124,7 +140,7 @@ defmodule Jellygrinder.LLClient do
       elapsed: System.convert_time_unit(end_time - start_time, :native, :millisecond),
       label: label,
       process_name: state.name,
-      url: state.base_url <> path
+      path: path
     }
 
     {result, data} =
