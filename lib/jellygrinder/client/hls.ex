@@ -1,4 +1,4 @@
-defmodule Jellygrinder.Client.Hls do
+defmodule Jellygrinder.Client.HLS do
   @moduledoc false
 
   @behaviour Jellygrinder.Client
@@ -38,9 +38,11 @@ defmodule Jellygrinder.Client.Hls do
         send(self(), :get_new_segment)
         track_manifest_name = Utils.get_track_manifest_name(master_manifest)
 
-        path = Path.join(state.base_path, state.track_manifest_name)
+        path = Path.join(state.base_path, track_manifest_name)
         {:ok, track_manifest} = Utils.request(path, "media playlist", state)
-        target_duration = get_target_duration(track_manifest)
+
+        target_duration =
+          get_target_duration(track_manifest)
 
         {:noreply,
          %{state | track_manifest_name: track_manifest_name, target_duration: target_duration}}
@@ -88,13 +90,16 @@ defmodule Jellygrinder.Client.Hls do
 
   defp get_last_segment(track_manifest) do
     track_manifest
-    |> String.split("\n")
+    |> String.split("\n", trim: true)
     |> List.last()
   end
 
   defp get_target_duration(track_manifest) do
-    Regex.scan(~r/^#EXT-X-TARGETDURATION:(.*)/, track_manifest, capture: :all_but_first)
-    |> hd()
-    |> hd()
+    {target_duration, _rest} =
+      Regex.run(~r/#EXT-X-TARGETDURATION:(.*)/, track_manifest, capture: :all_but_first)
+      |> hd()
+      |> Integer.parse()
+
+    target_duration
   end
 end

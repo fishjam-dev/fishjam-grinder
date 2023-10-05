@@ -31,6 +31,7 @@ defmodule Mix.Tasks.Lltest do
   * `--time <seconds>` - Duration of the test. Defaults to 300 seconds
   * `--spawn-interval <milliseconds>` - Interval at which to spawn new clients. Defaults to 200 milliseconds
   * `--out-path <path>` - Path to store the CSV with test results. Defaults to "results.csv"
+  * `--ll-hls` - By default, the tool will use hls standard.
 
   If `--url <url>` is not passed, the tool will attempt to infer the URL by communicating with Jellyfish.
   This uses the following options:
@@ -62,7 +63,8 @@ defmodule Mix.Tasks.Lltest do
           clients: :integer,
           time: :integer,
           spawn_interval: :integer,
-          out_path: :string
+          out_path: :string,
+          ll_hls: :boolean
         ]
       )
 

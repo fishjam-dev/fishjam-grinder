@@ -5,7 +5,7 @@ defmodule Jellygrinder.Coordinator do
 
   require Logger
 
-  alias Jellygrinder.Client.LLHLS
+  alias Jellygrinder.Client.{HLS, LLHLS}
   alias Jellygrinder.ClientSupervisor
   alias Jellygrinder.Coordinator.Config
 
@@ -57,6 +57,7 @@ defmodule Jellygrinder.Coordinator do
       spawn_interval: config.spawn_interval,
       out_path: config.out_path,
       client_count: 0,
+      ll_hls?: config.ll_hls,
       results: []
     }
 
@@ -82,11 +83,13 @@ defmodule Jellygrinder.Coordinator do
   end
 
   @impl true
-  def handle_info(:spawn_client, %{client_count: client_count} = state) do
+  def handle_info(:spawn_client, %{client_count: client_count, ll_hls?: ll_hls?} = state) do
     Process.send_after(self(), :spawn_client, state.spawn_interval)
     name = "client-#{client_count}"
 
-    case ClientSupervisor.spawn_client(LLHLS, %{uri: state.uri, name: name}) do
+    client = if ll_hls?, do: LLHLS, else: HLS
+
+    case ClientSupervisor.spawn_client(client, %{uri: state.uri, name: name}) do
       {:ok, pid} ->
         Logger.info("Coordinator: #{name} spawned at #{inspect(pid)}")
         _ref = Process.monitor(pid)
