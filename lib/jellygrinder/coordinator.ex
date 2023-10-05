@@ -63,7 +63,7 @@ defmodule Jellygrinder.Coordinator do
   end
 
   @impl true
-  def handle_info({:result, r}, %{results: results} = state) do
+  def handle_cast({:result, r}, %{results: results} = state) do
     r = amend_result(r, state)
 
     unless r.success do
@@ -85,7 +85,7 @@ defmodule Jellygrinder.Coordinator do
     Process.send_after(self(), :spawn_client, state.spawn_interval)
     name = "client-#{client_count}"
 
-    case ClientSupervisor.spawn_client(%{uri: state.uri, parent: self(), name: name}) do
+    case ClientSupervisor.spawn_client(%{uri: state.uri, name: name}) do
       {:ok, pid} ->
         Logger.info("Coordinator: #{name} spawned at #{inspect(pid)}")
         _ref = Process.monitor(pid)
