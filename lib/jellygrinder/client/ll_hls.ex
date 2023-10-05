@@ -86,7 +86,7 @@ defmodule Jellygrinder.Client.LLHLS do
 
   defp create_track_manifest_query(%{latest_partial: latest_partial} = _state) do
     [last_msn, last_part] =
-      Regex.run(~r/^muxed_segment_(\d+)_\w*_(\d+)_part.m4s$/, latest_partial.name,
+      Regex.run(~r/^muxed_segment_(\d+)_\w*_(\d+)_part.m4s$/, latest_partial,
         capture: :all_but_first
       )
       |> Enum.map(&String.to_integer/1)
