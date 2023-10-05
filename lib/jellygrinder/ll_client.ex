@@ -62,6 +62,8 @@ defmodule Jellygrinder.LLClient do
           |> Enum.to_list()
           |> List.first(state.latest_partial)
 
+        send(self(), :get_new_partials)
+
         {:noreply, %{state | latest_partial: latest_partial}}
 
       {:error, _response} ->
