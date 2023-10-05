@@ -7,6 +7,9 @@ defmodule Jellygrinder.LLClient do
   @max_partial_request_count 12
   @max_single_partial_request_retries 3
 
+  # in ms
+  @backoff 1000
+
   @parent Jellygrinder.Coordinator
 
   @spec start_link(%{uri: URI.t(), name: String.t()}) :: GenServer.on_start()
@@ -34,7 +37,7 @@ defmodule Jellygrinder.LLClient do
   def handle_continue({:get_master_manifest, path}, state) do
     case request(path, "master playlist", state) do
       {:ok, master_manifest} ->
-        GenServer.cast(self(), :get_new_partials)
+        send(self(), :get_new_partials)
         track_manifest_name = get_track_manifest_name(master_manifest)
 
         {:noreply, %{state | track_manifest_name: track_manifest_name}}
@@ -45,13 +48,13 @@ defmodule Jellygrinder.LLClient do
   end
 
   @impl true
-  def handle_cast(:get_new_partials, state) do
+  def handle_info(:get_new_partials, state) do
     path = Path.join(state.base_path, state.track_manifest_name)
     query = create_track_manifest_query(state)
 
-    latest_partial =
-      case request(path <> query, "media playlist", state) do
-        {:ok, track_manifest} ->
+    case request(path <> query, "media playlist", state) do
+      {:ok, track_manifest} ->
+        latest_partial =
           track_manifest
           |> get_new_partials_info(state.latest_partial)
           |> Stream.map(&request_partial(&1, state))
@@ -59,13 +62,13 @@ defmodule Jellygrinder.LLClient do
           |> Enum.to_list()
           |> List.first(state.latest_partial)
 
-        {:error, _response} ->
-          state.latest_partial
-      end
+        {:noreply, %{state | latest_partial: latest_partial}}
 
-    GenServer.cast(self(), :get_new_partials)
+      {:error, _response} ->
+        Process.send_after(self(), :get_new_partials, @backoff)
 
-    {:noreply, %{state | latest_partial: latest_partial}}
+        {:noreply, state}
+    end
   end
 
   @impl true
