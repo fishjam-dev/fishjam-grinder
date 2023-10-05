@@ -4,6 +4,7 @@ defmodule Jellygrinder.Client.LLHLS do
   @behaviour Jellygrinder.Client
 
   use GenServer, restart: :temporary
+
   alias Jellygrinder.Client.Helpers.{ConnectionManager, Utils}
 
   @max_partial_request_count 12
@@ -56,8 +57,11 @@ defmodule Jellygrinder.Client.LLHLS do
       {:ok, track_manifest} ->
         latest_partial =
           track_manifest
-          |> get_new_partials_info(state.latest_partial)
-          |> Stream.map(&request_partial(&1, state))
+          |> get_new_partials(state.latest_partial)
+          |> Stream.each(fn partial_name ->
+            Path.join(state.base_path, partial_name)
+            |> Utils.request("media partial segment", state, @max_single_partial_request_retries)
+          end)
           |> Stream.take(-1)
           |> Enum.to_list()
           |> List.first(state.latest_partial)
@@ -92,35 +96,11 @@ defmodule Jellygrinder.Client.LLHLS do
     "?_HLS_msn=#{last_msn}&_HLS_part=#{last_part + 1}"
   end
 
-  defp request_partial(partial, state, retries \\ @max_single_partial_request_retries)
-  defp request_partial(partial, _state, 0), do: partial
-
-  defp request_partial(partial, state, retries) do
-    path = Path.join(state.base_path, partial.name)
-
-    case Utils.request(path, "media partial segment", state) do
-      {:ok, _content} -> partial
-      {:error, _reason} -> request_partial(partial, state, retries - 1)
-    end
-  end
-
-  defp get_new_partials_info(track_manifest, latest_partial) do
+  defp get_new_partials(track_manifest, latest_partial) do
     track_manifest
-    |> trim_manifest(latest_partial)
-    |> then(&Regex.scan(~r/^#EXT-X-PART:DURATION=(.*),URI="(.*)"/m, &1, capture: :all_but_first))
+    |> Utils.trim_manifest(latest_partial)
+    |> then(&Regex.scan(~r/^#EXT-X-PART:.*URI="(.*)"/m, &1, capture: :all_but_first))
     |> Enum.take(-@max_partial_request_count)
-    |> Enum.map(fn [duration, name] -> %{duration: String.to_float(duration), name: name} end)
-  end
-
-  defp trim_manifest(manifest, nil) do
-    manifest
-  end
-
-  # Trim the manifest, returning everything after `partial`
-  # If `partial` isn't present, return the entire manifest
-  defp trim_manifest(manifest, partial) do
-    manifest
-    |> String.split(partial.name, parts: 2)
-    |> Enum.at(1, manifest)
+    |> List.flatten()
   end
 end

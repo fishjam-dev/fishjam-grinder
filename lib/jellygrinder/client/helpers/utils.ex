@@ -4,8 +4,38 @@ defmodule Jellygrinder.Client.Helpers.Utils do
   alias Jellygrinder.Client.Helpers.ConnectionManager
   alias Jellygrinder.Coordinator
 
-  @spec request(String.t(), String.t(), map()) :: {:ok | :error, binary()}
-  def request(path, label, state) do
+  @spec request(String.t(), String.t(), map(), non_neg_integer()) :: {:ok | :error, binary()}
+  def request(path, label, state, retries \\ 0)
+  def request(path, label, state, 0), do: request_and_log(path, label, state)
+
+  def request(path, label, state, retries) do
+    case request_and_log(path, label, state) do
+      {:ok, _content} = response -> response
+      {:error, _reason} -> request(path, label, state, retries - 1)
+    end
+  end
+
+  @spec get_track_manifest_name(String.t()) :: String.t()
+  def get_track_manifest_name(master_manifest) do
+    master_manifest
+    |> String.split("\n", trim: true)
+    |> List.last()
+  end
+
+  @doc """
+  Trim the manifest, returning everything after `pattern`
+  If `pattern == nil` or `pattern` isn't present in manifest, return the entire manifest
+  """
+  @spec trim_manifest(String.t(), String.t() | nil) :: String.t()
+  def trim_manifest(manifest, nil), do: manifest
+
+  def trim_manifest(manifest, pattern) do
+    manifest
+    |> String.split(pattern, parts: 2)
+    |> Enum.at(1, manifest)
+  end
+
+  defp request_and_log(path, label, state) do
     timestamp = get_current_timestamp_ms()
     start_time = System.monotonic_time()
     maybe_response = ConnectionManager.get(state.conn_manager, path)
@@ -44,13 +74,6 @@ defmodule Jellygrinder.Client.Helpers.Utils do
     GenServer.cast(Coordinator, {:result, Map.merge(request_info, result)})
 
     {if(result.success, do: :ok, else: :error), data}
-  end
-
-  @spec get_track_manifest_name(String.t()) :: String.t()
-  def get_track_manifest_name(master_manifest) do
-    master_manifest
-    |> String.split("\n")
-    |> List.last()
   end
 
   defp get_current_timestamp_ms() do
