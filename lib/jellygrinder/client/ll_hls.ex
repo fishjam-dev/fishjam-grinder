@@ -1,8 +1,10 @@
-defmodule Jellygrinder.LLClient do
+defmodule Jellygrinder.Client.LLHLS do
   @moduledoc false
 
+  @behaviour Jellygrinder.Client
+
   use GenServer, restart: :temporary
-  alias Jellygrinder.LLClient.ConnectionManager
+  alias Jellygrinder.Client.Helpers.{ConnectionManager, Utils}
 
   @max_partial_request_count 12
   @max_single_partial_request_retries 3
@@ -10,9 +12,7 @@ defmodule Jellygrinder.LLClient do
   # in ms
   @backoff 1000
 
-  @parent Jellygrinder.Coordinator
-
-  @spec start_link(%{uri: URI.t(), name: String.t()}) :: GenServer.on_start()
+  @impl true
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts)
   end
@@ -35,10 +35,10 @@ defmodule Jellygrinder.LLClient do
 
   @impl true
   def handle_continue({:get_master_manifest, path}, state) do
-    case request(path, "master playlist", state) do
+    case Utils.request(path, "master playlist", state) do
       {:ok, master_manifest} ->
         send(self(), :get_new_partials)
-        track_manifest_name = get_track_manifest_name(master_manifest)
+        track_manifest_name = Utils.get_track_manifest_name(master_manifest)
 
         {:noreply, %{state | track_manifest_name: track_manifest_name}}
 
@@ -52,7 +52,7 @@ defmodule Jellygrinder.LLClient do
     path = Path.join(state.base_path, state.track_manifest_name)
     query = create_track_manifest_query(state)
 
-    case request(path <> query, "media playlist", state) do
+    case Utils.request(path <> query, "media playlist", state) do
       {:ok, track_manifest} ->
         latest_partial =
           track_manifest
@@ -98,16 +98,10 @@ defmodule Jellygrinder.LLClient do
   defp request_partial(partial, state, retries) do
     path = Path.join(state.base_path, partial.name)
 
-    case request(path, "media partial segment", state) do
+    case Utils.request(path, "media partial segment", state) do
       {:ok, _content} -> partial
       {:error, _reason} -> request_partial(partial, state, retries - 1)
     end
-  end
-
-  defp get_track_manifest_name(master_manifest) do
-    master_manifest
-    |> String.split("\n")
-    |> List.last()
   end
 
   defp get_new_partials_info(track_manifest, latest_partial) do
@@ -128,52 +122,5 @@ defmodule Jellygrinder.LLClient do
     manifest
     |> String.split(partial.name, parts: 2)
     |> Enum.at(1, manifest)
-  end
-
-  defp request(path, label, state) do
-    timestamp = get_current_timestamp_ms()
-    start_time = System.monotonic_time()
-    maybe_response = ConnectionManager.get(state.conn_manager, path)
-    end_time = System.monotonic_time()
-
-    request_info = %{
-      timestamp: timestamp,
-      elapsed: System.convert_time_unit(end_time - start_time, :native, :millisecond),
-      label: label,
-      process_name: state.name,
-      path: path
-    }
-
-    {result, data} =
-      case maybe_response do
-        {:ok, response} ->
-          success = response.status == 200
-          data = Map.get(response, :data, "")
-
-          {%{
-             response_code: response.status,
-             success: success,
-             failure_msg: if(success, do: "", else: data),
-             bytes: byte_size(data)
-           }, data}
-
-        {:error, reason} ->
-          {%{
-             response_code: -1,
-             success: false,
-             failure_msg: inspect(reason),
-             bytes: -1
-           }, ""}
-      end
-
-    GenServer.cast(@parent, {:result, Map.merge(request_info, result)})
-
-    {if(result.success, do: :ok, else: :error), data}
-  end
-
-  defp get_current_timestamp_ms() do
-    {megaseconds, seconds, microseconds} = :os.timestamp()
-
-    megaseconds * 1_000_000_000 + seconds * 1000 + div(microseconds, 1000)
   end
 end

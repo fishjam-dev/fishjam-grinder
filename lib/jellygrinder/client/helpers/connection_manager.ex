@@ -1,4 +1,4 @@
-defmodule Jellygrinder.LLClient.ConnectionManager do
+defmodule Jellygrinder.Client.Helpers.ConnectionManager do
   @moduledoc false
 
   use GenServer
