@@ -4,9 +4,13 @@ defmodule Jellygrinder.Client.HLS do
   @behaviour Jellygrinder.Client
 
   use GenServer, restart: :temporary
-  require Logger
 
   alias Jellygrinder.Client.Helpers.{ConnectionManager, Utils}
+
+  @max_single_manifest_request_retries 3
+
+  # in ms
+  @backoff 1000
 
   @impl true
   def start_link(opts) do
@@ -41,11 +45,15 @@ defmodule Jellygrinder.Client.HLS do
         path = Path.join(state.base_path, track_manifest_name)
         {:ok, track_manifest} = Utils.request(path, "media playlist", state)
 
-        target_duration =
-          get_target_duration(track_manifest)
+        target_duration = get_target_duration(track_manifest)
 
-        {:noreply,
-         %{state | track_manifest_name: track_manifest_name, target_duration: target_duration}}
+        state = %{
+          state
+          | track_manifest_name: track_manifest_name,
+            target_duration: target_duration
+        }
+
+        {:noreply, state}
 
       {:error, _response} ->
         {:stop, :missing_master_manifest, state}
@@ -56,35 +64,24 @@ defmodule Jellygrinder.Client.HLS do
   def handle_info(:get_new_segment, state) do
     path = Path.join(state.base_path, state.track_manifest_name)
 
-    last_segment =
-      case Utils.request(path, "media playlist", state) do
-        {:ok, track_manifest} ->
-          last_segment = get_last_segment(track_manifest)
+    case Utils.request(path, "media playlist", state) do
+      {:ok, track_manifest} ->
+        last_segment = get_last_segment(track_manifest)
 
-          if state.last_segment == last_segment,
-            do: request_segment(last_segment, state),
-            else: Logger.warning("No new segments")
+        if state.last_segment != last_segment do
+          state.base_path
+          |> Path.join(last_segment)
+          |> Utils.request("media segment", state, @max_single_manifest_request_retries)
+        end
 
-          last_segment
+        Process.send_after(self(), :get_new_segment, state.target_duration * 1000)
 
-        {:error, _response} ->
-          state.last_segment
-      end
+        {:noreply, %{state | last_segment: last_segment}}
 
-    Process.send_after(self(), :get_new_segment, state.target_duration * 1000)
+      {:error, _response} ->
+        Process.send_after(self(), :get_new_segment, @backoff)
 
-    {:noreply, %{state | last_segment: last_segment}}
-  end
-
-  defp request_segment(segment, state) do
-    path = Path.join(state.base_path, segment)
-
-    case Utils.request(path, "media segment", state) do
-      {:ok, _content} ->
-        nil
-
-      {:error, reason} ->
-        Logger.warning("Got error while requesting segment, reason: #{inspect(reason)}")
+        {:noreply, state}
     end
   end
 

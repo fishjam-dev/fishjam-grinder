@@ -1,24 +1,24 @@
-defmodule Mix.Tasks.Lltest do
-  @shortdoc "Run LL-HLS stress test"
+defmodule Mix.Tasks.Grind do
+  @shortdoc "Run HLS stress test on Jellyfish"
   @moduledoc """
   # Name
 
-  `mix lltest` - #{@shortdoc}
+  `mix grind` - #{@shortdoc}
 
   # Synopsis
 
   ```
-  mix lltest [--url <url>] [--clients <count>] [--time <seconds>]
-             [--spawn-interval <milliseconds>] [--out-path <path>]
-             [--jellyfish-address <address>] [--jellyfish-token <token>] [--secure]
+  mix grind [--ll-hls] [--url <url>] [--clients <count>] [--time <seconds>]
+            [--spawn-interval <milliseconds>] [--out-path <path>]
+            [--jellyfish-address <address>] [--jellyfish-token <token>] [--secure]
   ```
 
   # Description
 
-  Mix task for running stress-tests on a Jellyfish serving LL-HLS.
+  Mix task for running stress-tests on a Jellyfish serving HLS/LL-HLS.
 
   This tool primarily tests the load handling capability and performance
-  of the media server. The test simulates multiple clients requesting LL-HLS
+  of the media server. The test simulates multiple clients requesting HLS
   content streams concurrently over a specified duration.
 
   It saves a CSV file with test results after the full duration of the test has passed,
@@ -26,12 +26,13 @@ defmodule Mix.Tasks.Lltest do
 
   # Available options
 
+  * `--ll-hls` - By default, the tool will use a client compatible with regular HLS.
+  If this option is passed, it will use a LL-HLS client instead
   * `--url <url>` - URL of the master HLS manifest. This can be inferred from Jellyfish, see below
   * `--clients <count>` - Number of client connections to simulate. Defaults to 500
   * `--time <seconds>` - Duration of the test. Defaults to 300 seconds
   * `--spawn-interval <milliseconds>` - Interval at which to spawn new clients. Defaults to 200 milliseconds
   * `--out-path <path>` - Path to store the CSV with test results. Defaults to "results.csv"
-  * `--ll-hls` - By default, the tool will use hls standard.
 
   If `--url <url>` is not passed, the tool will attempt to infer the URL by communicating with Jellyfish.
   This uses the following options:
@@ -43,7 +44,7 @@ defmodule Mix.Tasks.Lltest do
 
   # Example command
 
-  `mix lltest --jellyfish-address my-jellyfish.org:443 --jellyfish-token my-token --secure --clients 2000 --time 600`
+  `mix grind --jellyfish-address my-jellyfish.org:443 --jellyfish-token my-token --secure --clients 2000 --time 600`
   """
 
   use Mix.Task
