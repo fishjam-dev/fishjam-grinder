@@ -63,6 +63,8 @@ defmodule Jellygrinder.Client.Helpers.Utils do
            }, data}
 
         {:error, reason} ->
+          handle_failed_request(reason, state)
+
           {%{
              response_code: -1,
              success: false,
@@ -75,6 +77,14 @@ defmodule Jellygrinder.Client.Helpers.Utils do
 
     {if(result.success, do: :ok, else: :error), data}
   end
+
+  defp handle_failed_request(%error_struct{reason: :closed}, state)
+       when error_struct in [Mint.HTTPError, Mint.TransportError] do
+    # Make a single attempt to reconnect whenever a request fails with reason `:closed`
+    ConnectionManager.reconnect(state.conn_manager)
+  end
+
+  defp handle_failed_request(_other_error, _state), do: nil
 
   defp get_current_timestamp_ms() do
     {megaseconds, seconds, microseconds} = :os.timestamp()

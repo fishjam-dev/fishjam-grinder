@@ -3,7 +3,7 @@ defmodule Jellygrinder.Client.Helpers.ConnectionManager do
 
   use GenServer
 
-  defstruct [:conn, requests: %{}]
+  defstruct [:conn, :uri, requests: %{}]
 
   @connection_opts [protocols: [:http2]]
 
@@ -12,32 +12,52 @@ defmodule Jellygrinder.Client.Helpers.ConnectionManager do
     GenServer.start_link(__MODULE__, uri)
   end
 
-  @spec get(GenServer.server(), Path.t()) :: {:ok, map()} | {:error, term()}
+  @spec get(GenServer.server(), Path.t()) :: {:ok, map()} | {:error, Mint.Types.error()}
   def get(pid, path) do
     GenServer.call(pid, {:get, path})
   end
 
+  @spec reconnect(GenServer.server()) :: :ok | {:error, Mint.Types.error()}
+  def reconnect(pid) do
+    GenServer.call(pid, :reconnect)
+  end
+
   @impl true
   def init(uri) do
-    case Mint.HTTP.connect(String.to_atom(uri.scheme), uri.host, uri.port, @connection_opts) do
+    case connect(uri) do
       {:ok, conn} ->
-        state = %__MODULE__{conn: conn}
+        state = %__MODULE__{uri: uri, conn: conn}
         {:ok, state}
 
-      {:error, reason} ->
-        {:stop, reason}
+      {:error, mint_error} ->
+        {:stop, mint_error}
+    end
+  end
+
+  @impl true
+  def handle_call(:reconnect, _from, state) do
+    if Mint.HTTP.open?(state.conn) do
+      {:reply, :ok, state}
+    else
+      case connect(state.uri) do
+        {:ok, conn} ->
+          {:reply, :ok, %{state | conn: conn}}
+
+        {:error, _mint_error} = error ->
+          {:reply, error, state}
+      end
     end
   end
 
   @impl true
   def handle_call({:get, path}, from, state) do
-    case Mint.HTTP.request(state.conn, "GET", path, [], "") do
+    case Mint.HTTP.request(state.conn, "GET", path, [], nil) do
       {:ok, conn, request_ref} ->
         state = put_in(state.requests[request_ref], %{from: from, response: %{}})
         {:noreply, %{state | conn: conn}}
 
-      {:error, conn, reason} ->
-        {:reply, {:error, reason}, %{state | conn: conn}}
+      {:error, conn, mint_error} ->
+        {:reply, {:error, mint_error}, %{state | conn: conn}}
     end
   end
 
@@ -50,7 +70,22 @@ defmodule Jellygrinder.Client.Helpers.ConnectionManager do
       {:ok, conn, responses} ->
         state = Enum.reduce(responses, state, &process_response/2)
         {:noreply, %{state | conn: conn}}
+
+      {:error, conn, _mint_error, responses} ->
+        # The list `responses` may or may not contain the `{:error, ...}` tuple --
+        # if it doesn't, we will never reply to the request, so the call will timeout
+        # (if unchanged, after 5 seconds)
+        #
+        # Handling this case would require us to handle all timeouts
+        # (if `responses` is empty, there's no easy way to get the `request_ref`
+        # and lookup the `GenServer.from()` tuple we have to reply to...)
+        state = Enum.reduce(responses, state, &process_response/2)
+        {:noreply, %{state | conn: conn}}
     end
+  end
+
+  defp connect(uri) do
+    Mint.HTTP.connect(String.to_atom(uri.scheme), uri.host, uri.port, @connection_opts)
   end
 
   defp process_response({:status, request_ref, status}, state) do
@@ -72,9 +107,9 @@ defmodule Jellygrinder.Client.Helpers.ConnectionManager do
     state
   end
 
-  defp process_response({:error, request_ref, reason}, state) do
+  defp process_response({:error, request_ref, mint_error}, state) do
     {%{from: from}, state} = pop_in(state.requests[request_ref])
-    GenServer.reply(from, {:error, reason})
+    GenServer.reply(from, {:error, mint_error})
 
     state
   end
