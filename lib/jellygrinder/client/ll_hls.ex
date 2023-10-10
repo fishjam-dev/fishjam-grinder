@@ -59,7 +59,8 @@ defmodule Jellygrinder.Client.LLHLS do
           track_manifest
           |> get_new_partials(state.latest_partial)
           |> Stream.each(fn partial_name ->
-            Path.join(state.base_path, partial_name)
+            state.base_path
+            |> Path.join(partial_name)
             |> Utils.request("media partial segment", state, @max_single_partial_request_retries)
           end)
           |> Stream.take(-1)

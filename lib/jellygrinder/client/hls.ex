@@ -69,7 +69,8 @@ defmodule Jellygrinder.Client.HLS do
         last_segment = get_last_segment(track_manifest)
 
         if state.last_segment != last_segment do
-          Path.join(state.base_path, last_segment)
+          state.base_path
+          |> Path.join(last_segment)
           |> Utils.request("media segment", state, @max_single_manifest_request_retries)
         end
 
