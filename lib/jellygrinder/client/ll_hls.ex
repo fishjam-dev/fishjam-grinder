@@ -4,8 +4,9 @@ defmodule Jellygrinder.Client.LLHLS do
   @behaviour Jellygrinder.Client
 
   use GenServer, restart: :temporary
+  use Jellygrinder.Client
 
-  alias Jellygrinder.Client.Helpers.{ConnectionManager, Utils}
+  alias Jellygrinder.Client.Helpers.ConnectionManager
 
   @max_partial_request_count 12
   @max_single_partial_request_retries 3
@@ -36,10 +37,10 @@ defmodule Jellygrinder.Client.LLHLS do
 
   @impl true
   def handle_continue({:get_master_manifest, path}, state) do
-    case Utils.request(path, "master playlist", state) do
+    case request(path, "master playlist", state) do
       {:ok, master_manifest} ->
         send(self(), :get_new_partials)
-        track_manifest_name = Utils.get_track_manifest_name(master_manifest)
+        track_manifest_name = get_track_manifest_name(master_manifest)
 
         {:noreply, %{state | track_manifest_name: track_manifest_name}}
 
@@ -53,7 +54,7 @@ defmodule Jellygrinder.Client.LLHLS do
     path = Path.join(state.base_path, state.track_manifest_name)
     query = create_track_manifest_query(state)
 
-    case Utils.request(path <> query, "media playlist", state) do
+    case request(path <> query, "media playlist", state) do
       {:ok, track_manifest} ->
         latest_partial =
           track_manifest
@@ -61,7 +62,7 @@ defmodule Jellygrinder.Client.LLHLS do
           |> Stream.each(fn partial_name ->
             state.base_path
             |> Path.join(partial_name)
-            |> Utils.request("media partial segment", state, @max_single_partial_request_retries)
+            |> request("media partial segment", state, @max_single_partial_request_retries)
           end)
           |> Stream.take(-1)
           |> Enum.to_list()
@@ -99,7 +100,7 @@ defmodule Jellygrinder.Client.LLHLS do
 
   defp get_new_partials(track_manifest, latest_partial) do
     track_manifest
-    |> Utils.trim_manifest(latest_partial)
+    |> trim_manifest(latest_partial)
     |> then(&Regex.scan(~r/^#EXT-X-PART:.*URI="(.*)"/m, &1, capture: :all_but_first))
     |> Enum.take(-@max_partial_request_count)
     |> List.flatten()

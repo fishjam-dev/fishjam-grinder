@@ -4,8 +4,9 @@ defmodule Jellygrinder.Client.HLS do
   @behaviour Jellygrinder.Client
 
   use GenServer, restart: :temporary
+  use Jellygrinder.Client
 
-  alias Jellygrinder.Client.Helpers.{ConnectionManager, Utils}
+  alias Jellygrinder.Client.Helpers.{ConnectionManager}
 
   @max_single_manifest_request_retries 3
 
@@ -37,13 +38,13 @@ defmodule Jellygrinder.Client.HLS do
 
   @impl true
   def handle_continue({:get_master_manifest, path}, state) do
-    case Utils.request(path, "master_playlist", state) do
+    case request(path, "master_playlist", state) do
       {:ok, master_manifest} ->
         send(self(), :get_new_segment)
-        track_manifest_name = Utils.get_track_manifest_name(master_manifest)
+        track_manifest_name = get_track_manifest_name(master_manifest)
 
         path = Path.join(state.base_path, track_manifest_name)
-        {:ok, track_manifest} = Utils.request(path, "media playlist", state)
+        {:ok, track_manifest} = request(path, "media playlist", state)
 
         target_duration = get_target_duration(track_manifest)
 
@@ -64,14 +65,14 @@ defmodule Jellygrinder.Client.HLS do
   def handle_info(:get_new_segment, state) do
     path = Path.join(state.base_path, state.track_manifest_name)
 
-    case Utils.request(path, "media playlist", state) do
+    case request(path, "media playlist", state) do
       {:ok, track_manifest} ->
         last_segment = get_last_segment(track_manifest)
 
         if state.last_segment != last_segment do
           state.base_path
           |> Path.join(last_segment)
-          |> Utils.request("media segment", state, @max_single_manifest_request_retries)
+          |> request("media segment", state, @max_single_manifest_request_retries)
         end
 
         Process.send_after(self(), :get_new_segment, state.target_duration * 1000)
