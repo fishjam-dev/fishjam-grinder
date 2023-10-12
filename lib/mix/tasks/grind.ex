@@ -42,6 +42,16 @@ defmodule Mix.Tasks.Grind do
   * `--secure` - By default, the tool will try to communicate with Jellyfish using HTTP.
   If this option is passed, it will use HTTPS instead
 
+  # Notes
+
+  This tool opens a separate TCP connection for every simulated client.
+  Users should ensure that both the system running Jellyfish and the one running this tool
+  are prepared to handle this many connections. This may necessitate:
+
+  * increasing the open port limit, e.g. using `ulimit -n 65536`
+  * increasing the number of ports the Erlang VM can use, e.g. by setting the environment variable
+  `ELIXIR_ERL_OPTIONS="+Q 65536"`
+
   # Example command
 
   `mix grind --jellyfish-address my-jellyfish.org:443 --jellyfish-token my-token --secure --clients 2000 --time 600`
