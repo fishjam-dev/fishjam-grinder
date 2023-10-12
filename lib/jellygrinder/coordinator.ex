@@ -152,11 +152,17 @@ defmodule Jellygrinder.Coordinator do
   end
 
   defp results_header() do
-    "timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect\n"
+    """
+    timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,\
+    failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+    """
   end
 
   defp serialize_result(r) do
-    "#{r.timestamp},#{r.elapsed},#{r.label},#{r.response_code},,#{r.process_name},,#{r.success},#{csv_safe(r.failure_msg)},#{r.bytes},-1,#{r.client_count},#{r.client_count},#{r.url},-1,-1,-1\n"
+    """
+    #{r.timestamp},#{r.elapsed},#{r.label},#{r.response_code},,#{r.process_name},,#{r.success},\
+    #{csv_safe(r.failure_msg)},#{r.bytes},-1,#{r.client_count},#{r.client_count},#{r.url},-1,-1,-1
+    """
   end
 
   defp csv_safe(string) do
