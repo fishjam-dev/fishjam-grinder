@@ -59,11 +59,7 @@ defmodule Jellygrinder.Client.LLHLS do
         latest_partial =
           track_manifest
           |> get_new_partials(state.latest_partial)
-          |> Stream.each(fn partial_name ->
-            state.base_path
-            |> Path.join(partial_name)
-            |> request("media partial segment", state, @max_single_partial_request_retries)
-          end)
+          |> Stream.each(&request_partial(&1, state))
           |> Stream.take(-1)
           |> Enum.to_list()
           |> List.first(state.latest_partial)
@@ -104,5 +100,11 @@ defmodule Jellygrinder.Client.LLHLS do
     |> then(&Regex.scan(~r/^#EXT-X-PART:.*URI="(.*)"/m, &1, capture: :all_but_first))
     |> Enum.take(-@max_partial_request_count)
     |> List.flatten()
+  end
+
+  defp request_partial(partial_name, %{base_path: base_path} = state) do
+    base_path
+    |> Path.join(partial_name)
+    |> request("media partial segment", state, @max_single_partial_request_retries)
   end
 end
