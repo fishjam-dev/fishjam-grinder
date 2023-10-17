@@ -30,7 +30,7 @@ defmodule Jellygrinder.Coordinator do
 
   @impl true
   def init(_args) do
-    Logger.info("Coordinator: Init")
+    Logger.info("Coordinator: Init (pid: #{inspect(self())})")
 
     {:ok, nil}
   end
@@ -44,6 +44,7 @@ defmodule Jellygrinder.Coordinator do
       URL: #{config.url}
       Clients: #{config.clients}
       Time: #{config.time} s
+      Spawn interval: #{config.spawn_interval} ms
       Save results to: #{config.out_path}
     """)
 
