@@ -89,6 +89,7 @@ defmodule Jellygrinder.Client.HLS do
   defp get_last_segment(track_manifest) do
     track_manifest
     |> String.split("\n", trim: true)
+    |> Enum.reject(&String.starts_with?(&1, "#"))
     |> List.last()
   end
 
