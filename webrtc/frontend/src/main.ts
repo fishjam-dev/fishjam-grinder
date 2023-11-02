@@ -1,7 +1,7 @@
 import "./style.css";
 import "./mediaDevices.ts";
 import { JellyfishClient, Peer } from "@jellyfish-dev/ts-client-sdk";
-import { videoMediaStream, startDevice, audioMediaStream } from "./mediaDevices.ts";
+import { videoMediaStream, startDevice, audioMediaStream } from "./mediaDevices";
 
 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
 const devices = await navigator.mediaDevices.enumerateDevices();
@@ -54,8 +54,12 @@ client.addListener("disconnected", () => {
 });
 
 const token = params.peer_token;
+
 client.connect({
   token: token,
+  signaling: {
+    host: process.env.JF_ADDR,
+  },
   peerMetadata: { name: `Kamil${random_id()}` },
 });
 

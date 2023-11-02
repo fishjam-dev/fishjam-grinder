@@ -1,20 +1,13 @@
 {
-  "name": "jellyfish",
-  "version": "1.0.0",
-  "description": "[![codecov](https://codecov.io/gh/jellyfish-dev/jellyfish/branch/main/graph/badge.svg?token=ANWFKV2EDP)](https://codecov.io/gh/jellyfish-dev/jellyfish) [![CircleCI](https://circleci.com/gh/jellyfish-dev/jellyfish.svg?style=svg)](https://circleci.com/gh/jellyfish-dev/jellyfish)",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "example": "examples",
-    "lib": "lib",
-    "test": "test"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.39.0",
-    "@types/node": "^20.8.9"
+    "@types/node": "^20.8.10",
+    "@types/yargs": "^17.0.29",
+    "playwright": "^1.39.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "yargs": "^17.7.2"
   },
-  "scripts": {},
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "scripts": {
+    "load": "npx ts-node index.ts --"
+  }
 }
