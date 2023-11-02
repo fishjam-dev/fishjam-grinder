@@ -51,15 +51,9 @@ const argv = yargs(hideBin(process.argv))
     description: 'Additional delay after joining of last peer (s)',
     default: 10
   })
-  .option('username', {
+  .option('chrome-executable', {
     type: 'string',
-    description: 'Username used to connect to remote servers',
-    default: 'root'
-  })
-  .option('verbose', {
-    alias: 'v',
-    type: 'boolean',
-    description: 'Run with verbose logging',
+    description: 'Path to Google Chrome executable'
   })
   .demandOption(['jellyfish-address', 'jellyfish-token', 'peers', 'peers-per-room'])
   .argv

@@ -24,7 +24,7 @@ export const runBenchmark = async (args: args) => {
     const roomId = await client.createRoom();
 
     for (let j = 0; j < args.peersPerRoom && browsers.length < args.peers; j++) {
-      const browser = await startPeer(client, roomId);
+      const browser = await startPeer({ client: client, roomId: roomId, chromeExecutable: args.chromeExecutable });
 
       browsers.push(browser);
       process.stdout.clearLine(0);
@@ -47,7 +47,7 @@ export const runBenchmark = async (args: args) => {
   }
 };
 
-const startPeer = async (client: Client, roomId: string) => {
+const startPeer = async ({ client, roomId, chromeExecutable }: { client: Client, roomId: string, chromeExecutable: string }) => {
   const peerToken = await client.addPeer(roomId);
 
   const browser = await chromium.launch({
@@ -60,7 +60,7 @@ const startPeer = async (client: Client, roomId: string) => {
       isEnabled: (name: any, severity: any) => name === 'browser',
       log: (name: any, severity: any, message: any, args: any) => console.log(`${name} ${message}`)
     },
-    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    executablePath: chromeExecutable
   });
 
   const context = await browser.newContext();

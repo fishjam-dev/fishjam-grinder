@@ -8,6 +8,7 @@ export type args = {
   duration: number,
   delay: number,
   peerDelay: number,
+  chromeExecutable: string,
 }
 
 export type PeerResponse = {
