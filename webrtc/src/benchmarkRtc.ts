@@ -23,18 +23,25 @@ export const runBenchmark = async (args: args) => {
   while (browsers.length < args.peers) {
     const roomId = await client.createRoom();
 
-    for (let j = 0; j < args.peersPerRoom; j++, browsers.length < args.peers) {
+    for (let j = 0; j < args.peersPerRoom && browsers.length < args.peers; j++) {
       const browser = await startPeer(client, roomId);
 
       browsers.push(browser);
+      process.stdout.clearLine(0);
+      process.stdout.cursorTo(0);
+      process.stdout.write(`Browsers launched: ${browsers.length} / ${args.peers}`);
       await delay(args.peerDelay);
     }
   }
+  process.stdout.write("\n");
 
+  console.log("Started all browsers");
   await delay(args.delay);
 
+  console.log("Starting benchmark");
   await delay(args.duration);
 
+  console.log("Benchmark finished, closing");
   for (const browser of browsers) {
     browser.close();
   }

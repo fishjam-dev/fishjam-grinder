@@ -8,6 +8,7 @@
     "yargs": "^17.7.2"
   },
   "scripts": {
+    "setup": "npm i && cd frontend && npm i && cd ..",
     "load": "npx ts-node index.ts --"
   }
 }
