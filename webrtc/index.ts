@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { startServer } from "./src/server"
+import { Args } from "./src/types"
 
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
@@ -55,8 +56,13 @@ const argv = yargs(hideBin(process.argv))
     type: 'string',
     description: 'Path to Google Chrome executable'
   })
+  .option('peers-per-browser', {
+    type: 'integer',
+    description: 'Number of peers spawned per browser',
+    default: 16
+  })
   .demandOption(['jellyfish-address', 'jellyfish-token', 'peers', 'peers-per-room'])
-  .argv
+  .argv;
 
 console.log(argv);
 

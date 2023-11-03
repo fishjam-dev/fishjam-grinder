@@ -1,4 +1,4 @@
-import { RoomResponse, PeerResponse } from "./types";
+import { RoomResponse, PeerResponse, RoomsResponse } from "./types";
 
 export class Client {
   jellyfishAddress: string;
@@ -46,5 +46,29 @@ export class Client {
 
     const content: PeerResponse = await response.json() as PeerResponse;
     return content.data.token;
+  }
+
+  purge = async () => {
+    const roomsResponse = await fetch(`${this.jellyfishAddress}/room`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'authorization': `Bearer ${this.jellyfishToken}`,
+      }
+    });
+
+    const content: RoomsResponse = await roomsResponse.json() as RoomsResponse;
+
+    for (const room of content.data) {
+      await fetch(`${this.jellyfishAddress}/room/${room.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${this.jellyfishToken}`,
+        }
+      })
+    }
   }
 }

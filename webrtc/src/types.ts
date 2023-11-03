@@ -1,4 +1,4 @@
-export type args = {
+export type Args = {
   jellyfishAddress: string,
   jellyfishToken: string,
   secure: boolean,
@@ -9,6 +9,7 @@ export type args = {
   delay: number,
   peerDelay: number,
   chromeExecutable: string,
+  peersPerBrowser: number
 }
 
 export type PeerResponse = {
@@ -21,11 +22,17 @@ export type PeerResponse = {
 export type RoomResponse = {
   data: {
     jellyfish_address: string
-    room: {
-      id: string;
-      components: object;
-      peers: object;
-      config: object;
-    }
+    room: Room
   }
 };
+
+export type RoomsResponse = {
+  data: Array<Room>
+};
+
+export type Room = {
+  id: string;
+  components: object;
+  peers: object;
+  config: object;
+}
