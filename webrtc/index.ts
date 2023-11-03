@@ -67,7 +67,7 @@ const argv = yargs(hideBin(process.argv))
 console.log(argv);
 
 (async () => {
-  startServer({ jellyfishAddress: argv.jellyfishAddress });
+  startServer({ jellyfishAddress: argv.jellyfishAddress, secure: argv.secure });
 
   console.log('runBenchmark');
   runBenchmark(argv);

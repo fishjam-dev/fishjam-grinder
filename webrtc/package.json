@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@types/cli-progress": "^3.11.4",
     "@types/node": "^20.8.10",
     "@types/yargs": "^17.0.29",
     "playwright": "^1.39.0",
@@ -10,5 +11,9 @@
   "scripts": {
     "setup": "npm i && cd frontend && npm i && cd ..",
     "load": "npx ts-node index.ts --"
+  },
+  "dependencies": {
+    "catch-exit": "^1.2.2",
+    "cli-progress": "^3.12.0"
   }
 }

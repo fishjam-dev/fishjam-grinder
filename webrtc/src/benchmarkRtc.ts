@@ -24,11 +24,10 @@ export const runBenchmark = async (args: Args) => {
 
   const browsers = await addPeers(args);
 
-  console.log("Started all browsers");
+  console.log(`Started all browsers, waiting ${args.delay}s`);
   await delay(args.delay);
 
-  const { incoming, outgoing } = getExpectedBandwidth(args);
-  console.log(`\nRunning benchmark, Expected network usage: Incoming ${incoming} Mbit/s, Outgoing ${outgoing} Mbit/s`);
+  console.log(`\nRunning benchmark`);
   const progressBar = new SingleBar({}, Presets.shades_classic);
   progressBar.start(args.duration, 0);
 
@@ -62,7 +61,9 @@ const addPeers = async (args: Args) => {
 
       process.stdout.clearLine(0);
       process.stdout.cursorTo(0);
-      process.stdout.write(`Browsers launched: ${peersAdded} / ${args.peers}`);
+
+      const { incoming, outgoing } = getExpectedBandwidth(args);
+      process.stdout.write(`Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming} Mbit/s, Outgoing ${outgoing} Mbit/s`);
       await delay(args.peerDelay);
 
       if (peersInCurrentBrowser == args.peersPerBrowser) {
@@ -113,6 +114,8 @@ const cleanup = async (client: Client, browsers: Array<Browser>) => {
 
 const getExpectedBandwidth = (args: Args) => {
   const incoming = 1.5 * args.peers;
-  const outgoing = 1.5 * Math.floor(args.peers / args.peersPerRoom) * args.peersPerRoom * (args.peersPerRoom - 1);
+
+  const maxPeersInRoom = Math.min(args.peers, args.peersPerRoom);
+  const outgoing = 1.5 * Math.floor(args.peers / maxPeersInRoom) * maxPeersInRoom * (maxPeersInRoom - 1);
   return { incoming, outgoing };
 };

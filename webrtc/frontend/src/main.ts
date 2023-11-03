@@ -38,7 +38,7 @@ client.addListener("joined", (peerId: string, peers: Peer[]) => {
   const vidoeTrack = videoMediaStream.getVideoTracks()?.[0];
   if (!vidoeTrack) throw Error("Media stream has no video track!");
 
-  client.addTrack(vidoeTrack, videoMediaStream);
+  client.addTrack(vidoeTrack, videoMediaStream, undefined, { enabled: true, active_encodings: [] });
   console.log("Added video");
 
   // if (!audioMediaStream) throw Error("Audio strem is empty!");
@@ -59,8 +59,11 @@ client.connect({
   token: token,
   signaling: {
     host: process.env.JF_ADDR,
+    protocol: process.env.JF_PROTOCOL,
   },
-  peerMetadata: { name: `Kamil${random_id()}` },
+  peerMetadata: {
+    name: `Kamil${random_id()}`,
+  },
 });
 
 client.addListener("trackReady", (trackContext) => {

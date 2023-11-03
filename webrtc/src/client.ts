@@ -17,7 +17,7 @@ export class Client {
       method: 'POST',
       body: JSON.stringify({
         type: 'webrtc',
-        options: {}
+        options: {},
       }),
       headers: {
         'Accept': 'application/json',

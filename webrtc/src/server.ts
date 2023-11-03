@@ -1,6 +1,6 @@
 const { createServer } = require('vite')
 
-export const startServer = async ({ jellyfishAddress }: { jellyfishAddress: string }) => {
+export const startServer = async ({ jellyfishAddress, secure }: { jellyfishAddress: string, secure: boolean }) => {
   process.env
 
   const server = await createServer({
@@ -12,6 +12,7 @@ export const startServer = async ({ jellyfishAddress }: { jellyfishAddress: stri
     },
     define: {
       "process.env.JF_ADDR": JSON.stringify(jellyfishAddress),
+      "process.env.JF_PROTOCOL": JSON.stringify(secure ? "wss" : "ws"),
     }
   })
   await server.listen();
