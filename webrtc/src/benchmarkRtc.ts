@@ -1,18 +1,12 @@
 import { chromium, Browser } from 'playwright'
 import { Client } from './client'
 import { Args } from './types'
-import { SingleBar, Presets } from 'cli-progress'
-import { addExitCallback } from 'catch-exit';
-
-
-// import fs from 'fs';
-// import path from 'path';
-// import { NodeSSH } from 'node-ssh';
 
 const frontendAddress = 'http://localhost:5005';
 const fakeVideo = 'out.mjpeg';
 
-// const ssh = new NodeSSH()
+
+let trackEncodingsRaw = new Map<string, string>();
 
 const delay = (s: number) => {
   return new Promise(resolve => setTimeout(resolve, 1000 * s));
@@ -28,15 +22,21 @@ export const runBenchmark = async (args: Args) => {
   await delay(args.delay);
 
   console.log(`\nRunning benchmark`);
-  const progressBar = new SingleBar({}, Presets.shades_classic);
-  progressBar.start(args.duration, 0);
 
-  for (let time = 0, step = 5; time < args.duration; time += Math.min(step, args.duration - time)) {
+  let time = 0, step = 5;
+
+  while (true) {
     await delay(step);
-    progressBar.update(time);
+    time += Math.min(step, args.duration - time);
+
+    const trackEncodings = parseTrackEncodings();
+
+    process.stdout.clearLine(0);
+    process.stdout.cursorTo(0);
+    process.stdout.write(`${time} / ${args.duration}s (${Math.floor(time / args.duration)}), Encodings: ${JSON.stringify(trackEncodings)}`);
+
+    if (time == args.duration) break;
   }
-  progressBar.update(args.duration);
-  progressBar.stop();
 
   await cleanup(client, browsers);
 
@@ -62,8 +62,8 @@ const addPeers = async (args: Args) => {
       process.stdout.clearLine(0);
       process.stdout.cursorTo(0);
 
-      const { incoming, outgoing } = getExpectedBandwidth(args);
-      process.stdout.write(`Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming} Mbit/s, Outgoing ${outgoing} Mbit/s`);
+      const { incoming, outgoing } = getTrackNumber(args);
+      process.stdout.write(`Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming * 1.5} Mbit/s, Outgoing ${outgoing * 1.5} Mbit/s`);
       await delay(args.peerDelay);
 
       if (peersInCurrentBrowser == args.peersPerBrowser) {
@@ -102,6 +102,13 @@ const startPeer = async ({ browser, client, roomId }: { browser: Browser, client
   const page = await context.newPage();
 
   await page.goto(`${frontendAddress}?peer_token=${peerToken}`);
+
+  page.on('console', msg => {
+    const content = msg.text().trim();
+    if (content.includes("trackEncodings:")) {
+      trackEncodingsRaw.set(peerToken.substring(peerToken.length - 10), content.slice("trackEncodings:".length));
+    }
+  })
 };
 
 const cleanup = async (client: Client, browsers: Array<Browser>) => {
@@ -112,10 +119,31 @@ const cleanup = async (client: Client, browsers: Array<Browser>) => {
   await client.purge();
 };
 
-const getExpectedBandwidth = (args: Args) => {
-  const incoming = 1.5 * args.peers;
+const getTrackNumber = (args: Args) => {
+  const incoming = args.peers;
 
   const maxPeersInRoom = Math.min(args.peers, args.peersPerRoom);
-  const outgoing = 1.5 * Math.floor(args.peers / maxPeersInRoom) * maxPeersInRoom * (maxPeersInRoom - 1);
-  return { incoming, outgoing };
+  const peersInLastRoom = args.peers % args.peersPerRoom;
+  const outgoing = Math.floor(args.peers / maxPeersInRoom) * maxPeersInRoom * (maxPeersInRoom - 1) + peersInLastRoom * (peersInLastRoom - 1);
+
+  return { incoming, outgoing }
+};
+
+// const getExpectedBandwidth = (args: Args) => {
+
+//   return { incoming, outgoing };
+// };
+
+const parseTrackEncodings = () => {
+  const totalEncodings = { 'l': 0, 'm': 0, 'h': 0 };
+
+  trackEncodingsRaw.forEach((encodings: string, peerId: string) => {
+    for (const layer_char of 'lmh') {
+      const layer = layer_char as 'l' | 'm' | 'h';
+      // RegEx that matches all occurences of `layer` in `encodings`
+      const regex = new RegExp(layer, 'g');
+      totalEncodings[layer] += (encodings.match(regex) || []).length
+    }
+  });
+  return totalEncodings;
 };

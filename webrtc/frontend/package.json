@@ -17,7 +17,7 @@
     "vite": "^4.4.5"
   },
   "dependencies": {
-    "@jellyfish-dev/ts-client-sdk": "^0.2.0",
+    "@jellyfish-dev/ts-client-sdk": "^0.2.1",
     "hls.js": "^1.4.12",
     "prettier": "^3.0.3",
     "vite-plugin-checker": "^0.6.2"
