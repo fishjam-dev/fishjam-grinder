@@ -1,16 +1,16 @@
-import { chromium, Browser } from 'playwright'
-import { Client } from './client'
-import { Args } from './types'
-import { getEncodingsReport, onEncodingsUpdate } from './encodingReporter';
+import { chromium, Browser } from "playwright";
+import { Client } from "./client";
+import { Args } from "./types";
+import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 
-const frontendAddress = 'http://localhost:5005';
-const fakeVideo = 'sample_video.mjpeg';
+const frontendAddress = "http://localhost:5005";
+const fakeVideo = "sample_video.mjpeg";
 const ENCODING_REPORT_PERDIOD = 5;
 const INBOUD_TRACK_BANDWIDTH = 3.25;
 const OUTBOUND_TRACK_BANDWIDTH = 2.7;
 
 const delay = (s: number) => {
-  return new Promise(resolve => setTimeout(resolve, 1000 * s));
+  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
 };
 
 export const runBenchmark = async (args: Args) => {
@@ -19,27 +19,32 @@ export const runBenchmark = async (args: Args) => {
 
   const browsers = await addPeers(args);
 
-  console.log('Started all browsers, running benchmark');
+  console.log("Started all browsers, running benchmark");
 
   const encodingReports = [];
 
-  let time = 0, step = ENCODING_REPORT_PERDIOD;
+  let time = 0,
+    step = ENCODING_REPORT_PERDIOD;
   while (true) {
     await delay(step);
     step = Math.min(step, args.duration - time);
     time += step;
 
     const report = getEncodingsReport();
-    encodingReports.push({ ...report.toJson(), 'timestamp': time });
+    encodingReports.push({ ...report.toJson(), timestamp: time });
 
-    writeInPlace(`${time} / ${args.duration}s (${Math.floor(time / args.duration)}), Encodings: ${report.toString()}}`);
+    writeInPlace(
+      `${time} / ${args.duration}s (${Math.floor(
+        time / args.duration,
+      )}), Encodings: ${report.toString()}}`,
+    );
 
     if (time == args.duration) break;
   }
 
   await cleanup(client, browsers);
 
-  console.log('\nBenchmark finished, closing');
+  console.log("\nBenchmark finished, closing");
   process.exit(0);
 };
 
@@ -55,11 +60,21 @@ const addPeers = async (args: Args) => {
     const roomId = await client.createRoom();
 
     for (let j = 0; j < args.peersPerRoom && peersAdded < args.peers; j++) {
-      await startPeer({ browser: currentBrowser!, client: client, roomId: roomId });
+      await startPeer({
+        browser: currentBrowser!,
+        client: client,
+        roomId: roomId,
+      });
       peersAdded++, peersInCurrentBrowser++;
 
       const { incoming, outgoing } = getTrackNumber(args);
-      writeInPlace(`Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming * INBOUD_TRACK_BANDWIDTH} Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`);
+      writeInPlace(
+        `Browsers launched: ${peersAdded} / ${
+          args.peers
+        }  Expected network usage: Incoming ${
+          incoming * INBOUD_TRACK_BANDWIDTH
+        } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
+      );
       await delay(args.peerDelay);
 
       if (peersInCurrentBrowser == args.peersPerBrowser) {
@@ -69,36 +84,48 @@ const addPeers = async (args: Args) => {
       }
     }
   }
-  console.log('');
+  console.log("");
 
   return browsers;
 };
 
 const spawnBrowser = async (chromeExecutable: string) => {
   const browser = await chromium.launch({
-    args: ['--use-fake-device-for-media-stream',
-      `--use-file-for-fake-video-capture=${fakeVideo}`, '--auto-accept-camera-and-microphone-capture'],
+    args: [
+      "--use-fake-device-for-media-stream",
+      `--use-file-for-fake-video-capture=${fakeVideo}`,
+      "--auto-accept-camera-and-microphone-capture",
+    ],
 
     // Start headfull browser
     // devtools: true,
     logger: {
-      isEnabled: (name: any, severity: any) => name === 'browser',
-      log: (name: any, severity: any, message: any, args: any) => console.log(`${name} ${message}`)
+      isEnabled: (name: any, severity: any) => name === "browser",
+      log: (name: any, severity: any, message: any, args: any) =>
+        console.log(`${name} ${message}`),
     },
-    executablePath: chromeExecutable
+    executablePath: chromeExecutable,
   });
 
   return browser;
 };
 
-const startPeer = async ({ browser, client, roomId }: { browser: Browser, client: Client, roomId: string }) => {
+const startPeer = async ({
+  browser,
+  client,
+  roomId,
+}: {
+  browser: Browser;
+  client: Client;
+  roomId: string;
+}) => {
   const peerToken = await client.addPeer(roomId);
 
   const context = await browser.newContext();
   const page = await context.newPage();
 
   await page.goto(`${frontendAddress}?peer_token=${peerToken}`);
-  page.on('console', (msg) => onEncodingsUpdate(msg, peerToken));
+  page.on("console", (msg) => onEncodingsUpdate(msg, peerToken));
 };
 
 const cleanup = async (client: Client, browsers: Array<Browser>) => {
@@ -114,9 +141,13 @@ const getTrackNumber = (args: Args) => {
 
   const maxPeersInRoom = Math.min(args.peers, args.peersPerRoom);
   const peersInLastRoom = args.peers % args.peersPerRoom;
-  const outgoing = Math.floor(args.peers / maxPeersInRoom) * maxPeersInRoom * (maxPeersInRoom - 1) + peersInLastRoom * (peersInLastRoom - 1);
+  const outgoing =
+    Math.floor(args.peers / maxPeersInRoom) *
+      maxPeersInRoom *
+      (maxPeersInRoom - 1) +
+    peersInLastRoom * (peersInLastRoom - 1);
 
-  return { incoming, outgoing }
+  return { incoming, outgoing };
 };
 
 const writeInPlace = (text: string) => {

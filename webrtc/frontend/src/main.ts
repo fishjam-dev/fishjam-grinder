@@ -61,7 +61,7 @@ client.connect({
 });
 
 client.addListener("trackReady", (trackContext) => {
-  console.log("Track ready, requesting \"h\"");
+  console.log('Track ready, requesting "h"');
 
   client.setTargetTrackEncoding(trackContext.trackId, "h");
 });
@@ -75,10 +75,10 @@ setInterval(() => {
   const trackEncodings = [];
 
   for (const trackId in tracks) {
-    const encoding = tracks[trackId].encoding
+    const encoding = tracks[trackId].encoding;
 
     trackEncodings.push(encoding);
-    if (encoding != 'h') {
+    if (encoding != "h") {
       client.setTargetTrackEncoding(trackId, "h");
     }
   }

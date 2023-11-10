@@ -1,33 +1,33 @@
 export type Args = {
-  jellyfishAddress: string,
-  jellyfishToken: string,
-  secure: boolean,
-  username: string,
-  peersPerRoom: number,
-  peers: number,
-  duration: number,
-  delay: number,
-  peerDelay: number,
-  chromeExecutable: string,
-  peersPerBrowser: number
-}
+  jellyfishAddress: string;
+  jellyfishToken: string;
+  secure: boolean;
+  username: string;
+  peersPerRoom: number;
+  peers: number;
+  duration: number;
+  delay: number;
+  peerDelay: number;
+  chromeExecutable: string;
+  peersPerBrowser: number;
+};
 
 export type PeerResponse = {
   data: {
     token: string;
     peer: object;
-  }
-}
+  };
+};
 
 export type RoomResponse = {
   data: {
-    jellyfish_address: string
-    room: Room
-  }
+    jellyfish_address: string;
+    room: Room;
+  };
 };
 
 export type RoomsResponse = {
-  data: Array<Room>
+  data: Array<Room>;
 };
 
 export type Room = {
@@ -35,4 +35,4 @@ export type Room = {
   components: object;
   peers: object;
   config: object;
-}
+};

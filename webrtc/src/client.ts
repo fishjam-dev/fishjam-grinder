@@ -4,9 +4,16 @@ export class Client {
   jellyfishAddress: string;
   jellyfishToken: string;
 
-  constructor({ jellyfishAddress, jellyfishToken, secure }: { jellyfishAddress: string, jellyfishToken: string, secure: boolean }) {
-
-    const protocol = secure ? 'https' : 'http';
+  constructor({
+    jellyfishAddress,
+    jellyfishToken,
+    secure,
+  }: {
+    jellyfishAddress: string;
+    jellyfishToken: string;
+    secure: boolean;
+  }) {
+    const protocol = secure ? "https" : "http";
 
     this.jellyfishAddress = `${protocol}://${jellyfishAddress}`;
     this.jellyfishToken = jellyfishToken;
@@ -14,61 +21,65 @@ export class Client {
 
   createRoom = async () => {
     const response = await fetch(`${this.jellyfishAddress}/room/`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({
-        type: 'webrtc',
+        type: "webrtc",
         options: {},
       }),
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'authorization': `Bearer ${this.jellyfishToken}`,
-      }
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        authorization: `Bearer ${this.jellyfishToken}`,
+      },
     });
 
-    const content: RoomResponse = await response.json() as RoomResponse;
+    const content: RoomResponse = (await response.json()) as RoomResponse;
     return content.data.room.id;
-  }
+  };
 
   addPeer = async (roomId: string) => {
-    const response = await fetch(`${this.jellyfishAddress}/room/${roomId}/peer`, {
-      method: 'POST',
-      body: JSON.stringify({
-        type: 'webrtc',
-        options: {}
-      }),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'authorization': `Bearer ${this.jellyfishToken}`,
-      }
-    });
+    const response = await fetch(
+      `${this.jellyfishAddress}/room/${roomId}/peer`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          type: "webrtc",
+          options: {},
+        }),
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          authorization: `Bearer ${this.jellyfishToken}`,
+        },
+      },
+    );
 
-    const content: PeerResponse = await response.json() as PeerResponse;
+    const content: PeerResponse = (await response.json()) as PeerResponse;
     return content.data.token;
-  }
+  };
 
   purge = async () => {
     const roomsResponse = await fetch(`${this.jellyfishAddress}/room`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'authorization': `Bearer ${this.jellyfishToken}`,
-      }
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        authorization: `Bearer ${this.jellyfishToken}`,
+      },
     });
 
-    const content: RoomsResponse = await roomsResponse.json() as RoomsResponse;
+    const content: RoomsResponse =
+      (await roomsResponse.json()) as RoomsResponse;
 
     for (const room of content.data) {
       await fetch(`${this.jellyfishAddress}/room/${room.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'authorization': `Bearer ${this.jellyfishToken}`,
-        }
-      })
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          authorization: `Bearer ${this.jellyfishToken}`,
+        },
+      });
     }
-  }
+  };
 }
