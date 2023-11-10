@@ -1,12 +1,13 @@
 import { chromium, Browser } from 'playwright'
 import { Client } from './client'
 import { Args } from './types'
+import { getEncodingsReport, onEncodingsUpdate } from './encodingReporter';
 
 const frontendAddress = 'http://localhost:5005';
-const fakeVideo = 'out.mjpeg';
-
-
-let trackEncodingsRaw = new Map<string, string>();
+const fakeVideo = 'sample_video.mjpeg';
+const ENCODING_REPORT_PERDIOD = 5;
+const INBOUD_TRACK_BANDWIDTH = 3.25;
+const OUTBOUND_TRACK_BANDWIDTH = 2.7;
 
 const delay = (s: number) => {
   return new Promise(resolve => setTimeout(resolve, 1000 * s));
@@ -18,29 +19,27 @@ export const runBenchmark = async (args: Args) => {
 
   const browsers = await addPeers(args);
 
-  console.log(`Started all browsers, waiting ${args.delay}s`);
-  await delay(args.delay);
+  console.log('Started all browsers, running benchmark');
 
-  console.log(`\nRunning benchmark`);
+  const encodingReports = [];
 
-  let time = 0, step = 5;
-
+  let time = 0, step = ENCODING_REPORT_PERDIOD;
   while (true) {
     await delay(step);
-    time += Math.min(step, args.duration - time);
+    step = Math.min(step, args.duration - time);
+    time += step;
 
-    const trackEncodings = parseTrackEncodings();
+    const report = getEncodingsReport();
+    encodingReports.push({ ...report.toJson(), 'timestamp': time });
 
-    process.stdout.clearLine(0);
-    process.stdout.cursorTo(0);
-    process.stdout.write(`${time} / ${args.duration}s (${Math.floor(time / args.duration)}), Encodings: ${JSON.stringify(trackEncodings)}`);
+    writeInPlace(`${time} / ${args.duration}s (${Math.floor(time / args.duration)}), Encodings: ${report.toString()}}`);
 
     if (time == args.duration) break;
   }
 
   await cleanup(client, browsers);
 
-  console.log("\nBenchmark finished, closing");
+  console.log('\nBenchmark finished, closing');
   process.exit(0);
 };
 
@@ -59,11 +58,8 @@ const addPeers = async (args: Args) => {
       await startPeer({ browser: currentBrowser!, client: client, roomId: roomId });
       peersAdded++, peersInCurrentBrowser++;
 
-      process.stdout.clearLine(0);
-      process.stdout.cursorTo(0);
-
       const { incoming, outgoing } = getTrackNumber(args);
-      process.stdout.write(`Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming * 1.5} Mbit/s, Outgoing ${outgoing * 1.5} Mbit/s`);
+      writeInPlace(`Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming * INBOUD_TRACK_BANDWIDTH} Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`);
       await delay(args.peerDelay);
 
       if (peersInCurrentBrowser == args.peersPerBrowser) {
@@ -73,7 +69,7 @@ const addPeers = async (args: Args) => {
       }
     }
   }
-  process.stdout.write("\n");
+  console.log('');
 
   return browsers;
 };
@@ -102,13 +98,7 @@ const startPeer = async ({ browser, client, roomId }: { browser: Browser, client
   const page = await context.newPage();
 
   await page.goto(`${frontendAddress}?peer_token=${peerToken}`);
-
-  page.on('console', msg => {
-    const content = msg.text().trim();
-    if (content.includes("trackEncodings:")) {
-      trackEncodingsRaw.set(peerToken.substring(peerToken.length - 10), content.slice("trackEncodings:".length));
-    }
-  })
+  page.on('console', (msg) => onEncodingsUpdate(msg, peerToken));
 };
 
 const cleanup = async (client: Client, browsers: Array<Browser>) => {
@@ -129,21 +119,8 @@ const getTrackNumber = (args: Args) => {
   return { incoming, outgoing }
 };
 
-// const getExpectedBandwidth = (args: Args) => {
-
-//   return { incoming, outgoing };
-// };
-
-const parseTrackEncodings = () => {
-  const totalEncodings = { 'l': 0, 'm': 0, 'h': 0 };
-
-  trackEncodingsRaw.forEach((encodings: string, peerId: string) => {
-    for (const layer_char of 'lmh') {
-      const layer = layer_char as 'l' | 'm' | 'h';
-      // RegEx that matches all occurences of `layer` in `encodings`
-      const regex = new RegExp(layer, 'g');
-      totalEncodings[layer] += (encodings.match(regex) || []).length
-    }
-  });
-  return totalEncodings;
+const writeInPlace = (text: string) => {
+  process.stdout.clearLine(0);
+  process.stdout.cursorTo(0);
+  process.stdout.write(text);
 };

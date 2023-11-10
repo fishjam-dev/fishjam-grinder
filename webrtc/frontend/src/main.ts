@@ -39,14 +39,8 @@ client.addListener("joined", (peerId: string, peers: Peer[]) => {
   if (!vidoeTrack) throw Error("Media stream has no video track!");
 
   client.addTrack(vidoeTrack, videoMediaStream, undefined, { enabled: true, activeEncodings: ["l", "m", "h"] });
+
   console.log("Added video");
-
-  // if (!audioMediaStream) throw Error("Audio strem is empty!");
-  // const audoiTrack = audioMediaStream.getAudioTracks()?.[0];
-  // if (!audoiTrack) throw Error("Media stream has no audio track!");
-
-  // client.addTrack(audoiTrack, audioMediaStream);
-  // console.log("Added audio");
 });
 
 client.addListener("disconnected", () => {
@@ -68,6 +62,7 @@ client.connect({
 
 client.addListener("trackReady", (trackContext) => {
   console.log("Track ready, requesting \"h\"");
+
   client.setTargetTrackEncoding(trackContext.trackId, "h");
 });
 
@@ -80,7 +75,12 @@ setInterval(() => {
   const trackEncodings = [];
 
   for (const trackId in tracks) {
-    trackEncodings.push(tracks[trackId].encoding);
+    const encoding = tracks[trackId].encoding
+
+    trackEncodings.push(encoding);
+    if (encoding != 'h') {
+      client.setTargetTrackEncoding(trackId, "h");
+    }
   }
 
   console.log(`trackEncodings: ${trackEncodings}`);
