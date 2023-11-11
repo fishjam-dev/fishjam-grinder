@@ -52,6 +52,13 @@ client.addListener("joined", (peerId: string, peers: Peer[]) => {
     );
 
     console.log("Added video");
+
+    if (!audioMediaStream) throw Error("Audio strem is empty!");
+    const audoiTrack = audioMediaStream.getAudioTracks()?.[0];
+    if (!audoiTrack) throw Error("Media stream has no audio track!");
+
+    client.addTrack(audoiTrack, audioMediaStream);
+    console.log("Added audio");
   }
 });
 

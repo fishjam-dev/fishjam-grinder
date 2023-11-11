@@ -5,6 +5,7 @@ import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 
 const frontendAddress = "http://localhost:5005";
 const fakeVideo = "sample_video.mjpeg";
+const fakeAudio = "sample_audio.wav";
 const ENCODING_REPORT_PERDIOD = 5;
 const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
 const OUTBOUND_TRACK_BANDWIDTH = 1.5;
@@ -93,11 +94,13 @@ const spawnBrowser = async (chromeExecutable: string) => {
     args: [
       "--use-fake-device-for-media-stream",
       `--use-file-for-fake-video-capture=${fakeVideo}`,
+      `--use-file-for-fake-audio-capture=${fakeAudio}`,
       "--auto-accept-camera-and-microphone-capture",
+      "--no-sandbox"
     ],
 
     // Start headfull browser
-    // devtools: true,
+    devtools: true,
     logger: {
       isEnabled: (name: any, severity: any) => name === "browser",
       log: (name: any, severity: any, message: any, args: any) =>
