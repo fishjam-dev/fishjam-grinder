@@ -6,8 +6,8 @@ import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 const frontendAddress = "http://localhost:5005";
 const fakeVideo = "sample_video.mjpeg";
 const ENCODING_REPORT_PERDIOD = 5;
-const INBOUD_TRACK_BANDWIDTH = 3.25;
-const OUTBOUND_TRACK_BANDWIDTH = 2.7;
+const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
+const OUTBOUND_TRACK_BANDWIDTH = 1.5;
 
 const delay = (s: number) => {
   return new Promise((resolve) => setTimeout(resolve, 1000 * s));
@@ -64,15 +64,14 @@ const addPeers = async (args: Args) => {
         browser: currentBrowser!,
         client: client,
         roomId: roomId,
+        active: j < args.activePeers,
       });
       peersAdded++, peersInCurrentBrowser++;
 
       const { incoming, outgoing } = getTrackNumber(args);
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${
-          args.peers
-        }  Expected network usage: Incoming ${
-          incoming * INBOUD_TRACK_BANDWIDTH
+        `Browsers launched: ${peersAdded} / ${args.peers
+        }  Expected network usage: Incoming ${incoming * INBOUD_TRACK_BANDWIDTH
         } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
       );
       await delay(args.peerDelay);
@@ -114,17 +113,23 @@ const startPeer = async ({
   browser,
   client,
   roomId,
+  active,
 }: {
   browser: Browser;
   client: Client;
   roomId: string;
+  active: boolean;
 }) => {
   const peerToken = await client.addPeer(roomId);
 
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto(`${frontendAddress}?peer_token=${peerToken}`);
+  await page.goto(
+    `${frontendAddress}?peerToken=${peerToken}&activePeer=${JSON.stringify(
+      active,
+    )}`,
+  );
   page.on("console", (msg) => onEncodingsUpdate(msg, peerToken));
 };
 
@@ -137,15 +142,19 @@ const cleanup = async (client: Client, browsers: Array<Browser>) => {
 };
 
 const getTrackNumber = (args: Args) => {
-  const incoming = args.peers;
-
   const maxPeersInRoom = Math.min(args.peers, args.peersPerRoom);
+  const fullRooms = Math.floor(args.peers / maxPeersInRoom);
   const peersInLastRoom = args.peers % args.peersPerRoom;
+  const activePeersInLastRoom = Math.min(args.activePeers, peersInLastRoom);
+
+  const incoming =
+    fullRooms * args.activePeers + activePeersInLastRoom;
+
   const outgoing =
-    Math.floor(args.peers / maxPeersInRoom) *
-      maxPeersInRoom *
-      (maxPeersInRoom - 1) +
-    peersInLastRoom * (peersInLastRoom - 1);
+    fullRooms *
+    args.activePeers *
+    (maxPeersInRoom - 1) +
+    activePeersInLastRoom * (peersInLastRoom - 1);
 
   return { incoming, outgoing };
 };

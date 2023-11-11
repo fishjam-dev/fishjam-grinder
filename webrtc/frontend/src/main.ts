@@ -1,6 +1,6 @@
 import "./style.css";
 import "./mediaDevices.ts";
-import { JellyfishClient, Peer } from "@jellyfish-dev/ts-client-sdk";
+import { JellyfishClient, Peer, TrackEncoding } from "@jellyfish-dev/ts-client-sdk";
 import { videoMediaStream, startDevice, audioMediaStream } from "./mediaDevices";
 
 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
@@ -34,20 +34,32 @@ export const client = new JellyfishClient<PeerMetadata, TrackMetadata>();
 client.addListener("joined", (peerId: string, peers: Peer[]) => {
   console.log("joined");
 
-  if (!videoMediaStream) throw Error("Video stram is empty!");
-  const vidoeTrack = videoMediaStream.getVideoTracks()?.[0];
-  if (!vidoeTrack) throw Error("Media stream has no video track!");
+  if (params.activePeer === "true") {
+    if (!videoMediaStream) throw Error("Video stram is empty!");
+    const vidoeTrack = videoMediaStream.getVideoTracks()?.[0];
+    if (!vidoeTrack) throw Error("Media stream has no video track!");
 
-  client.addTrack(vidoeTrack, videoMediaStream, undefined, { enabled: true, activeEncodings: ["l", "m", "h"] });
+    client.addTrack(
+      vidoeTrack,
+      videoMediaStream,
+      undefined,
+      { enabled: true, activeEncodings: ["l", "m", "h"] },
+      new Map<TrackEncoding, number>([
+        ["l", 150],
+        ["m", 500],
+        ["h", 1500],
+      ]),
+    );
 
-  console.log("Added video");
+    console.log("Added video");
+  }
 });
 
 client.addListener("disconnected", () => {
   console.log("disconnected");
 });
 
-const token = params.peer_token;
+const token = params.peerToken;
 
 client.connect({
   token: token,
@@ -61,9 +73,7 @@ client.connect({
 });
 
 client.addListener("trackReady", (trackContext) => {
-  console.log('Track ready, requesting "h"');
-
-  client.setTargetTrackEncoding(trackContext.trackId, "h");
+  console.log("Track ready");
 });
 
 client.addListener("trackRemoved", (trackContext) => {

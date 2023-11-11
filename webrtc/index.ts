@@ -37,6 +37,11 @@ const argv = yargs(hideBin(process.argv))
     type: "integer",
     description: "Number of peers in each room",
   })
+  .option("active-peers", {
+    type: "integer",
+    default: undefined,
+    decription: "Number of active peers in each room",
+  })
   .option("duration", {
     type: "integer",
     description: "Duration of the benchmark (s)",
@@ -66,12 +71,15 @@ const argv = yargs(hideBin(process.argv))
     "jellyfish-token",
     "peers",
     "peers-per-room",
+    "chrome-executable",
   ]).argv;
-
-console.log(argv);
 
 (async () => {
   startServer({ jellyfishAddress: argv.jellyfishAddress, secure: argv.secure });
+
+  argv.peersPerRoom = Math.min(argv.peersPerRoom, argv.peers);
+  if (argv.activePeers == undefined) argv.activePeers = argv.peersPerRoom;
+  console.log(argv);
 
   console.log("runBenchmark");
   runBenchmark(argv);

@@ -10,6 +10,7 @@ export type Args = {
   peerDelay: number;
   chromeExecutable: string;
   peersPerBrowser: number;
+  activePeers: number;
 };
 
 export type PeerResponse = {
