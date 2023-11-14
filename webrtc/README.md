@@ -8,6 +8,10 @@ Make sure to have installed [Node](https://docs.npmjs.com/downloading-and-instal
 
 Run `npm setup`.
 
+Ensure Chrome installation:
+`npm run install-chrome`
+The installation directory will vary, depending on the OS.
+
 ## Usage
 
 Run `npm run grind -- --help` for usage information.

@@ -12,6 +12,7 @@
   },
   "scripts": {
     "setup": "npm i && cd frontend && npm i && cd ..",
+    "install-chrome": "npx playwright install chrome",
     "grind": "npx ts-node index.ts"
   },
   "dependencies": {
