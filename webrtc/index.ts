@@ -79,6 +79,7 @@ const argv = yargs(hideBin(process.argv))
 
   argv.peersPerRoom = Math.min(argv.peersPerRoom, argv.peers);
   if (argv.activePeers == undefined) argv.activePeers = argv.peersPerRoom;
+  argv.activePeers = Math.min(argv.activePeers, argv.peersPerRoom);
   console.log(argv);
 
   console.log("runBenchmark");

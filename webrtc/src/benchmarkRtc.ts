@@ -100,7 +100,7 @@ const spawnBrowser = async (chromeExecutable: string) => {
     ],
 
     // Start headfull browser
-    devtools: true,
+    // devtools: true,
     logger: {
       isEnabled: (name: any, severity: any) => name === "browser",
       log: (name: any, severity: any, message: any, args: any) =>
