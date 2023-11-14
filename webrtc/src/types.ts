@@ -2,11 +2,9 @@ export type Args = {
   jellyfishAddress: string;
   jellyfishToken: string;
   secure: boolean;
-  username: string;
-  peersPerRoom: number;
   peers: number;
+  peersPerRoom: number;
   duration: number;
-  delay: number;
   peerDelay: number;
   chromeExecutable: string;
   peersPerBrowser: number;

@@ -11,11 +11,6 @@ const { runBenchmark } = require("./src/benchmarkRtc");
 const { fileURLToPath } = require("url");
 
 const argv = yargs(hideBin(process.argv))
-  .option("rooms", {
-    alias: "r",
-    type: "integer",
-    description: "Number of rooms",
-  })
   .option("jellyfish-address", {
     type: "string",
     description: "Address of Jellyfish server",
@@ -26,7 +21,7 @@ const argv = yargs(hideBin(process.argv))
   })
   .option("secure", {
     type: "boolean",
-    description: "Use secure connection (https / wss) instead of (http / ws)",
+    description: "Use secure connection (https / wss)",
     default: false,
   })
   .options("peers", {
@@ -40,7 +35,8 @@ const argv = yargs(hideBin(process.argv))
   .option("active-peers", {
     type: "integer",
     default: undefined,
-    decription: "Number of active peers in each room",
+    decription:
+      "Number of active peers in each room, default to `peers-per-room`",
   })
   .option("duration", {
     type: "integer",
@@ -51,11 +47,6 @@ const argv = yargs(hideBin(process.argv))
     type: "integer",
     description: "Delay between joining of each peer (s)",
     default: 1,
-  })
-  .option("delay", {
-    type: "integer",
-    description: "Additional delay after joining of last peer (s)",
-    default: 10,
   })
   .option("chrome-executable", {
     type: "string",
@@ -75,6 +66,7 @@ const argv = yargs(hideBin(process.argv))
   ]).argv;
 
 (async () => {
+  // Start the frontend server
   startServer({ jellyfishAddress: argv.jellyfishAddress, secure: argv.secure });
 
   argv.peersPerRoom = Math.min(argv.peersPerRoom, argv.peers);
@@ -82,6 +74,5 @@ const argv = yargs(hideBin(process.argv))
   argv.activePeers = Math.min(argv.activePeers, argv.peersPerRoom);
   console.log(argv);
 
-  console.log("runBenchmark");
   runBenchmark(argv);
 })();

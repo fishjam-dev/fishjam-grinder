@@ -4,8 +4,8 @@ import { Args } from "./types";
 import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 
 const frontendAddress = "http://localhost:5005";
-const fakeVideo = "sample_video.mjpeg";
-const fakeAudio = "sample_audio.wav";
+const fakeVideo = "media/sample_video.mjpeg";
+const fakeAudio = "media/sample_audio.wav";
 const ENCODING_REPORT_PERDIOD = 5;
 const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
 const OUTBOUND_TRACK_BANDWIDTH = 1.5;
@@ -71,8 +71,10 @@ const addPeers = async (args: Args) => {
 
       const { incoming, outgoing } = getTrackNumber(args);
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${args.peers
-        }  Expected network usage: Incoming ${incoming * INBOUD_TRACK_BANDWIDTH
+        `Browsers launched: ${peersAdded} / ${
+          args.peers
+        }  Expected network usage: Incoming ${
+          incoming * INBOUD_TRACK_BANDWIDTH
         } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
       );
       await delay(args.peerDelay);
@@ -96,7 +98,7 @@ const spawnBrowser = async (chromeExecutable: string) => {
       `--use-file-for-fake-video-capture=${fakeVideo}`,
       `--use-file-for-fake-audio-capture=${fakeAudio}`,
       "--auto-accept-camera-and-microphone-capture",
-      "--no-sandbox"
+      "--no-sandbox",
     ],
 
     // Start headfull browser
@@ -150,13 +152,10 @@ const getTrackNumber = (args: Args) => {
   const peersInLastRoom = args.peers % args.peersPerRoom;
   const activePeersInLastRoom = Math.min(args.activePeers, peersInLastRoom);
 
-  const incoming =
-    fullRooms * args.activePeers + activePeersInLastRoom;
+  const incoming = fullRooms * args.activePeers + activePeersInLastRoom;
 
   const outgoing =
-    fullRooms *
-    args.activePeers *
-    (maxPeersInRoom - 1) +
+    fullRooms * args.activePeers * (maxPeersInRoom - 1) +
     activePeersInLastRoom * (peersInLastRoom - 1);
 
   return { incoming, outgoing };

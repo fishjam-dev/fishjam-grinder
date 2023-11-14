@@ -1,53 +1,21 @@
-# Benchmarks
+# Jellygrinder WebRTC
 
-There are two benchmarks:
+Utility for running WebRTC stress-tests against [the Jellyfish Media Server](https://github.com/jellyfish-dev/jellyfish)
 
-- simple - one big room
-- multiroom - multiple rooms with a small number of peers
+## Installation
 
-To run stampede benchmarks, type from the root directory
+Make sure to have installed [Node](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) first.
 
-```elixir
-MIX_ENV=benchmark mix run benchmarks/<benchmark_name>.exs
-```
+Run `npm setup`.
 
-To run testRTC benchmarks on our testing machine, type from the root directory
+## Usage
 
-```elixir
-MIX_ENV=benchmark EXTERNAL_IP=<ip> mix run benchmarks/testrtc.exs <api_key> <test_name>
-```
+Run `npx ts-node index.ts --help` for usage information.
 
-where `test_name` is either `beamchmark-simple` or `beamchmark-multiroom`.
+## Copyright and License
 
-## Testbed
+Copyright 2023, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
 
-- AMD EPYC 7502P 32-Core Processor
-- 128 GB RAM
-- video 1280x720, 9667 Kbps
-- audio 192Kbps
-- simulcast video limits: 1500Kbps, 500Kbps, 150Kbps
-- non-simulcast video limit: 1500Kbps
-- Chrome Stable (107.0.5304.110-1)
-- Membrane RTC Engine - 0.8.2
+[![Software Mansion](https://logo.swmansion.com/logo?color=white&variant=desktop&width=200&tag=membrane-github)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
 
-## Test scenarios
-
-- simple - 1 room with 20 participants
-- multiroom - 50 rooms, each with 5 participants
-
-## Results
-
-### Simple
-
-- **unsuccessful** simulcast with target quality set to 1280x720 - avg. CPU 65% -
-  that might be because of two peers being kicked from the session
-- simulcast with target quality set to 640x360 - avg. CPU 77%
-- non-simulcast with the quality set to 1280x720 - avg. CPU 75%
-
-### Multiroom
-
-- simulcast with target quality set to 1280x720 - avg. CPU 35%
-- simulcast with target quality set to 640x360 - avg. CPU 27%
-- non-simulcast with the quality set to 1280x720 - avg. CPU 23-25%
-
-The exact results are located under [results](results).
+Licensed under the [Apache License, Version 2.0](LICENSE)
