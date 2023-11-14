@@ -60,7 +60,7 @@ jobs:
       - checkout:
           path: ~/app
       - run: npm run setup
-      - run: npx ts-node index.ts --help
+      - run: npm run grind -- --help
 
   lint_webrtc:
     executor: 

@@ -41,7 +41,7 @@ export const onEncodingsUpdate = (msg: ConsoleMessage, peerToken: string) => {
   const content = msg.text().trim();
   if (content.includes("trackEncodings:")) {
     trackEncodingsRaw.set(
-      peerToken.substring(peerToken.length - 10),
+      peerToken,
       content.slice("trackEncodings:".length),
     );
   }

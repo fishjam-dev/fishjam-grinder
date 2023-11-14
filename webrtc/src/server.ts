@@ -7,10 +7,7 @@ export const startServer = async ({
   jellyfishAddress: string;
   secure: boolean;
 }) => {
-  process.env;
-
   const server = await createServer({
-    // any valid user config options, plus `mode` and `configFile`
     configFile: false,
     root: "./frontend",
     server: {
@@ -22,6 +19,4 @@ export const startServer = async ({
     },
   });
   await server.listen();
-
-  server.printUrls();
 };

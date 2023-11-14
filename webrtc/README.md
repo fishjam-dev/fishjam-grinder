@@ -10,7 +10,7 @@ Run `npm setup`.
 
 ## Usage
 
-Run `npx ts-node index.ts --help` for usage information.
+Run `npm run grind -- --help` for usage information.
 
 ## Copyright and License
 

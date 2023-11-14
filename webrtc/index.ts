@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 
-import { startServer } from "./src/server";
-import { Args } from "./src/types";
-
 const yargs = require("yargs/yargs");
 const { hideBin } = require("yargs/helpers");
 
-const { runBenchmark } = require("./src/benchmarkRtc");
-
-const { fileURLToPath } = require("url");
+import { startServer } from "./src/server";
+import { runBenchmark } from "./src/benchmarkRtc";
 
 const argv = yargs(hideBin(process.argv))
   .option("jellyfish-address", {

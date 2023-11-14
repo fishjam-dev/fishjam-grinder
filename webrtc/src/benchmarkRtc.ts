@@ -6,7 +6,7 @@ import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 const frontendAddress = "http://localhost:5005";
 const fakeVideo = "media/sample_video.mjpeg";
 const fakeAudio = "media/sample_audio.wav";
-const ENCODING_REPORT_PERDIOD = 5;
+const ENCODING_REPORT_PERIOD = 5;
 const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
 const OUTBOUND_TRACK_BANDWIDTH = 1.5;
 
@@ -25,7 +25,7 @@ export const runBenchmark = async (args: Args) => {
   const encodingReports = [];
 
   let time = 0,
-    step = ENCODING_REPORT_PERDIOD;
+    step = ENCODING_REPORT_PERIOD;
   while (true) {
     await delay(step);
     step = Math.min(step, args.duration - time);
@@ -71,10 +71,8 @@ const addPeers = async (args: Args) => {
 
       const { incoming, outgoing } = getTrackNumber(args);
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${
-          args.peers
-        }  Expected network usage: Incoming ${
-          incoming * INBOUD_TRACK_BANDWIDTH
+        `Browsers launched: ${peersAdded} / ${args.peers
+        }  Expected network usage: Incoming ${incoming * INBOUD_TRACK_BANDWIDTH
         } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
       );
       await delay(args.peerDelay);

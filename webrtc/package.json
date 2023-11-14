@@ -12,7 +12,7 @@
   },
   "scripts": {
     "setup": "npm i && cd frontend && npm i && cd ..",
-    "load": "npx ts-node index.ts --"
+    "grind": "npx ts-node index.ts"
   },
   "dependencies": {
     "catch-exit": "^1.2.2",
