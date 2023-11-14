@@ -71,8 +71,10 @@ const addPeers = async (args: Args) => {
 
       const { incoming, outgoing } = getTrackNumber(args);
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${args.peers
-        }  Expected network usage: Incoming ${incoming * INBOUD_TRACK_BANDWIDTH
+        `Browsers launched: ${peersAdded} / ${
+          args.peers
+        }  Expected network usage: Incoming ${
+          incoming * INBOUD_TRACK_BANDWIDTH
         } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
       );
       await delay(args.peerDelay);

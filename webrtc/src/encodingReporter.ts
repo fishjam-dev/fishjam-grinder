@@ -40,9 +40,6 @@ export const getEncodingsReport = () => {
 export const onEncodingsUpdate = (msg: ConsoleMessage, peerToken: string) => {
   const content = msg.text().trim();
   if (content.includes("trackEncodings:")) {
-    trackEncodingsRaw.set(
-      peerToken,
-      content.slice("trackEncodings:".length),
-    );
+    trackEncodingsRaw.set(peerToken, content.slice("trackEncodings:".length));
   }
 };

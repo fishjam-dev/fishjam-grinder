@@ -13,7 +13,8 @@
   "scripts": {
     "setup": "npm i && cd frontend && npm i && cd ..",
     "install-chrome": "npx playwright install chrome",
-    "grind": "npx ts-node index.ts"
+    "grind": "npx ts-node index.ts",
+    "format": "npx prettier . --write"
   },
   "dependencies": {
     "catch-exit": "^1.2.2",
