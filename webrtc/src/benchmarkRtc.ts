@@ -1,4 +1,5 @@
 import { chromium, Browser } from "playwright";
+import { TrackEncoding } from "@jellyfish-dev/ts-client-sdk";
 import { Client } from "./client";
 import { Args } from "./types";
 import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
@@ -6,9 +7,13 @@ import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 const frontendAddress = "http://localhost:5005";
 const fakeVideo = "media/sample_video.mjpeg";
 const fakeAudio = "media/sample_audio.wav";
-const ENCODING_REPORT_PERIOD = 5;
-const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
-const OUTBOUND_TRACK_BANDWIDTH = 1.5;
+
+const encodingReportPeriod = 5;
+const encodingBitrate = new Map<TrackEncoding, number>([
+  ["l", 0.15],
+  ["m", 0.5],
+  ["h", 1.5],
+]);
 
 const delay = (s: number) => {
   return new Promise((resolve) => setTimeout(resolve, 1000 * s));
@@ -25,7 +30,7 @@ export const runBenchmark = async (args: Args) => {
   const encodingReports = [];
 
   let time = 0,
-    step = ENCODING_REPORT_PERIOD;
+    step = encodingReportPeriod;
   while (true) {
     await delay(step);
     step = Math.min(step, args.duration - time);
@@ -69,13 +74,9 @@ const addPeers = async (args: Args) => {
       });
       peersAdded++, peersInCurrentBrowser++;
 
-      const { incoming, outgoing } = getTrackNumber(args);
+      const { incoming, outgoing } = getEstimatedBandwidth(args);
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${
-          args.peers
-        }  Expected network usage: Incoming ${
-          incoming * INBOUD_TRACK_BANDWIDTH
-        } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
+        `Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming} Mbit/s, Outgoing ${outgoing} Mbit/s`,
       );
       await delay(args.peerDelay);
 
@@ -146,17 +147,24 @@ const cleanup = async (client: Client, browsers: Array<Browser>) => {
   await client.purge();
 };
 
-const getTrackNumber = (args: Args) => {
+const getEstimatedBandwidth = (args: Args) => {
   const maxPeersInRoom = Math.min(args.peers, args.peersPerRoom);
   const fullRooms = Math.floor(args.peers / maxPeersInRoom);
   const peersInLastRoom = args.peers % args.peersPerRoom;
   const activePeersInLastRoom = Math.min(args.activePeers, peersInLastRoom);
 
-  const incoming = fullRooms * args.activePeers + activePeersInLastRoom;
+  const incoming_tracks = fullRooms * args.activePeers + activePeersInLastRoom;
 
-  const outgoing =
+  const outgoing_tracks =
     fullRooms * args.activePeers * (maxPeersInRoom - 1) +
     activePeersInLastRoom * (peersInLastRoom - 1);
+
+  const outgoing = encodingBitrate.get(args.targetEncoding)! * incoming_tracks;
+
+  let incoming = 0;
+  for (const encoding of args.availableEncodings) {
+    incoming += encodingBitrate.get(encoding)! * incoming_tracks;
+  }
 
   return { incoming, outgoing };
 };

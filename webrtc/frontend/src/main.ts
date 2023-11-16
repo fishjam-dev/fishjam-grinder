@@ -29,6 +29,9 @@ type TrackMetadata = {
   type: "camera" | "microphone" | "screenshare";
 };
 
+const activeEncodings: TrackEncoding[] = process.env.ACTIVE_ENCODINGS?.split("") as TrackEncoding[];
+const targetEncoding: TrackEncoding = process.env.TARGET_ENCODING as TrackEncoding;
+
 export const client = new JellyfishClient<PeerMetadata, TrackMetadata>();
 
 client.addListener("joined", (peerId: string, peers: Peer[]) => {
@@ -43,7 +46,7 @@ client.addListener("joined", (peerId: string, peers: Peer[]) => {
       vidoeTrack,
       videoMediaStream,
       undefined,
-      { enabled: true, activeEncodings: ["l", "m", "h"] },
+      { enabled: true, activeEncodings: activeEncodings },
       new Map<TrackEncoding, number>([
         ["l", 150],
         ["m", 500],
@@ -92,11 +95,13 @@ setInterval(() => {
   const trackEncodings = [];
 
   for (const trackId in tracks) {
-    const encoding = tracks[trackId].encoding;
+    if (tracks[trackId].track?.kind == "video") {
+      const encoding = tracks[trackId].encoding;
 
-    trackEncodings.push(encoding);
-    if (encoding != "h") {
-      client.setTargetTrackEncoding(trackId, "h");
+      trackEncodings.push(encoding);
+      if (encoding != targetEncoding) {
+        client.setTargetTrackEncoding(trackId, targetEncoding);
+      }
     }
   }
 

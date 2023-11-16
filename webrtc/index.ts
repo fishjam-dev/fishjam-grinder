@@ -6,7 +6,7 @@ const { hideBin } = require("yargs/helpers");
 import { startServer } from "./src/server";
 import { runBenchmark } from "./src/benchmarkRtc";
 
-const argv = yargs(hideBin(process.argv))
+const args = yargs(hideBin(process.argv))
   .option("jellyfish-address", {
     type: "string",
     description: "Address of Jellyfish server",
@@ -62,13 +62,21 @@ const argv = yargs(hideBin(process.argv))
   ]).argv;
 
 (async () => {
+  args.targetEncoding = "h";
+  args.availableEncodings = ["l", "m", "h"];
+
   // Start the frontend server
-  startServer({ jellyfishAddress: argv.jellyfishAddress, secure: argv.secure });
+  startServer({
+    jellyfishAddress: args.jellyfishAddress,
+    secure: args.secure,
+    targetEncoding: args.targetEncoding,
+    activeEncodings: args.availableEncodings,
+  });
 
-  argv.peersPerRoom = Math.min(argv.peersPerRoom, argv.peers);
-  if (argv.activePeers == undefined) argv.activePeers = argv.peersPerRoom;
-  argv.activePeers = Math.min(argv.activePeers, argv.peersPerRoom);
-  console.log(argv);
+  args.peersPerRoom = Math.min(args.peersPerRoom, args.peers);
+  if (args.activePeers == undefined) args.activePeers = args.peersPerRoom;
+  args.activePeers = Math.min(args.activePeers, args.peersPerRoom);
+  console.log(args);
 
-  runBenchmark(argv);
+  runBenchmark(args);
 })();
