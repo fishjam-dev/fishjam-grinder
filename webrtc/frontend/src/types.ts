@@ -11,4 +11,4 @@ type MediaKind = "audio" | "video";
 type QueryParams = {
   peerToken: string;
   activePeer: boolean;
-}
+};

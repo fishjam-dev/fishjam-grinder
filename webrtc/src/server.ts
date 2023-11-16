@@ -1,12 +1,11 @@
+import { JellyfishConfig } from "./types";
+
 const { createServer } = require("vite");
 
 export const startServer = async ({
   jellyfishAddress,
   secure,
-}: {
-  jellyfishAddress: string;
-  secure: boolean;
-}) => {
+}: JellyfishConfig) => {
   const server = await createServer({
     configFile: false,
     root: "./frontend",

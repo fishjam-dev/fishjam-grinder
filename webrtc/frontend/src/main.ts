@@ -86,8 +86,8 @@ const parseQueryParams = () => {
 
   return {
     peerToken: params.peerToken,
-    activePeer: params.activePeer === "true"
-  }
+    activePeer: params.activePeer === "true",
+  };
 };
 
 const [audioMediaStream, videoMediaStream] = await startDevices();

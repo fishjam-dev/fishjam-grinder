@@ -10,8 +10,9 @@ const ENCODING_REPORT_PERIOD = 5;
 const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
 const OUTBOUND_TRACK_BANDWIDTH = 1.5;
 
-const delay = (s: number) => {
-  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
+const second = 1000;
+const delay = (n: number) => {
+  return new Promise((resolve) => setTimeout(resolve, n * second));
 };
 
 export const runBenchmark = async (args: Args) => {
@@ -22,26 +23,20 @@ export const runBenchmark = async (args: Args) => {
 
   console.log("Started all browsers, running benchmark");
 
-  const encodingReports = [];
-
-  let time = 0,
-    step = ENCODING_REPORT_PERIOD;
-  while (true) {
-    await delay(step);
-    step = Math.min(step, args.duration - time);
-    time += step;
-
+  for (
+    let time = 0, step = ENCODING_REPORT_PERIOD;
+    time < args.duration;
+    step = Math.min(step, args.duration - time), time += step
+  ) {
     const report = getEncodingsReport();
-    encodingReports.push({ ...report.toJson(), timestamp: time });
 
     writeInPlace(
-      `${time} / ${args.duration}s (${Math.floor(
-        time / args.duration,
-      )}), Encodings: ${report.toString()}}`,
+      `${time} / ${args.duration}s, Encodings: ${report.toString()}}`,
     );
-
-    if (time == args.duration) break;
+    await delay(step);
   }
+
+  writeInPlace(`${args.duration} / ${args.duration}s`);
 
   await cleanup(client, browsers);
 
@@ -57,6 +52,8 @@ const addPeers = async (args: Args) => {
   let browsers: Array<Browser> = [];
   let currentBrowser = await spawnBrowser(args.chromeExecutable);
 
+  const { incomingTracks, outgoingTracks } = getTrackNumber(args);
+
   while (peersAdded < args.peers) {
     const roomId = await client.createRoom();
 
@@ -69,13 +66,12 @@ const addPeers = async (args: Args) => {
       });
       peersAdded++, peersInCurrentBrowser++;
 
-      const { incoming, outgoing } = getTrackNumber(args);
       writeInPlace(
         `Browsers launched: ${peersAdded} / ${
           args.peers
         }  Expected network usage: Incoming ${
-          incoming * INBOUD_TRACK_BANDWIDTH
-        } Mbit/s, Outgoing ${outgoing * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
+          incomingTracks * INBOUD_TRACK_BANDWIDTH
+        } Mbit/s, Outgoing ${outgoingTracks * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
       );
       await delay(args.peerDelay);
 
@@ -139,10 +135,7 @@ const startPeer = async ({
 };
 
 const cleanup = async (client: Client, browsers: Array<Browser>) => {
-  for (const browser of browsers) {
-    browser.close();
-  }
-
+  browsers.forEach((browser) => browser.close());
   await client.purge();
 };
 
@@ -152,13 +145,13 @@ const getTrackNumber = (args: Args) => {
   const peersInLastRoom = args.peers % args.peersPerRoom;
   const activePeersInLastRoom = Math.min(args.activePeers, peersInLastRoom);
 
-  const incoming = fullRooms * args.activePeers + activePeersInLastRoom;
+  const incomingTracks = fullRooms * args.activePeers + activePeersInLastRoom;
 
-  const outgoing =
+  const outgoingTracks =
     fullRooms * args.activePeers * (maxPeersInRoom - 1) +
     activePeersInLastRoom * (peersInLastRoom - 1);
 
-  return { incoming, outgoing };
+  return { incomingTracks, outgoingTracks };
 };
 
 const writeInPlace = (text: string) => {

@@ -20,47 +20,41 @@ export class Client {
   }
 
   createRoom = async () => {
-    const response = await fetch(`${this.jellyfishAddress}/room/`, {
-      method: "POST",
-      body: JSON.stringify({
-        type: "webrtc",
-        options: {},
-      }),
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        authorization: `Bearer ${this.jellyfishToken}`,
-      },
-    });
+    const response = await this.request("POST", "/room/");
 
     const content: RoomResponse = (await response.json()) as RoomResponse;
     return content.data.room.id;
   };
 
   addPeer = async (roomId: string) => {
-    const response = await fetch(
-      `${this.jellyfishAddress}/room/${roomId}/peer`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          type: "webrtc",
-          options: {},
-        }),
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          authorization: `Bearer ${this.jellyfishToken}`,
-        },
-      },
-    );
+    const response = await this.request("POST", `/room/${roomId}/peer`, {
+      type: "webrtc",
+      options: {},
+    });
 
     const content: PeerResponse = (await response.json()) as PeerResponse;
     return content.data.token;
   };
 
   purge = async () => {
-    const roomsResponse = await fetch(`${this.jellyfishAddress}/room`, {
-      method: "GET",
+    const roomsResponse = await this.request("GET", "/room");
+
+    const content: RoomsResponse =
+      (await roomsResponse.json()) as RoomsResponse;
+
+    for (const room of content.data) {
+      await this.request("DELETE", `/room/${room.id}`);
+    }
+  };
+
+  private request = async (
+    method: "GET" | "POST" | "DELETE",
+    path: string,
+    body?: object,
+  ) => {
+    const response = await fetch(`${this.jellyfishAddress}${path}`, {
+      method: method,
+      body: JSON.stringify(body),
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -68,18 +62,6 @@ export class Client {
       },
     });
 
-    const content: RoomsResponse =
-      (await roomsResponse.json()) as RoomsResponse;
-
-    for (const room of content.data) {
-      await fetch(`${this.jellyfishAddress}/room/${room.id}`, {
-        method: "DELETE",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          authorization: `Bearer ${this.jellyfishToken}`,
-        },
-      });
-    }
+    return response;
   };
 }

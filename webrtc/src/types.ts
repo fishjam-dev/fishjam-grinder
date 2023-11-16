@@ -35,3 +35,13 @@ export type Room = {
   peers: object;
   config: object;
 };
+
+export type JellyfishConfig = {
+  jellyfishAddress: string;
+  secure: boolean;
+};
+
+export type RawTrackEncodings = Map<PeerToken, RemoteTrackEncodings>;
+
+export type PeerToken = string;
+type RemoteTrackEncodings = string;

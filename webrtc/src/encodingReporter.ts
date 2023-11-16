@@ -1,6 +1,7 @@
 import { ConsoleMessage } from "playwright";
+import { PeerToken, RawTrackEncodings } from "./types";
 
-let trackEncodingsRaw = new Map<string, string>();
+let rawTrackEncodings: RawTrackEncodings = new Map();
 
 export class EncodingsReport {
   report: {
@@ -34,12 +35,15 @@ export class EncodingsReport {
 }
 
 export const getEncodingsReport = () => {
-  return new EncodingsReport(trackEncodingsRaw);
+  return new EncodingsReport(rawTrackEncodings);
 };
 
-export const onEncodingsUpdate = (msg: ConsoleMessage, peerToken: string) => {
+export const onEncodingsUpdate = (
+  msg: ConsoleMessage,
+  peerToken: PeerToken,
+) => {
   const content = msg.text().trim();
-  if (content.includes("trackEncodings:")) {
-    trackEncodingsRaw.set(peerToken, content.slice("trackEncodings:".length));
+  if (content.startsWith("trackEncodings:")) {
+    rawTrackEncodings.set(peerToken, content.slice("trackEncodings:".length));
   }
 };
