@@ -42,9 +42,10 @@ export class Client {
     const content: RoomsResponse =
       (await roomsResponse.json()) as RoomsResponse;
 
-    for (const room of content.data) {
-      await this.request("DELETE", `/room/${room.id}`);
-    }
+    const promises = content.data.map((room) =>
+      this.request("DELETE", `/room/${room.id}`),
+    );
+    await Promise.all(promises);
   };
 
   private request = async (

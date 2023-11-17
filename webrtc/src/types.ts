@@ -1,3 +1,5 @@
+import { TrackEncoding } from "@jellyfish-dev/ts-client-sdk";
+
 export type Args = {
   jellyfishAddress: string;
   jellyfishToken: string;
@@ -9,6 +11,8 @@ export type Args = {
   chromeExecutable: string;
   peersPerBrowser: number;
   activePeers: number;
+  targetEncoding: TrackEncoding;
+  availableEncodings: TrackEncoding[];
 };
 
 export type PeerResponse = {
@@ -39,6 +43,8 @@ export type Room = {
 export type JellyfishConfig = {
   jellyfishAddress: string;
   secure: boolean;
+  targetEncoding: TrackEncoding;
+  activeEncodings: TrackEncoding[];
 };
 
 export type RawTrackEncodings = Map<PeerToken, RemoteTrackEncodings>;

@@ -1,4 +1,5 @@
 import { chromium, Browser } from "playwright";
+import { TrackEncoding } from "@jellyfish-dev/ts-client-sdk";
 import { Client } from "./client";
 import { Args } from "./types";
 import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
@@ -6,9 +7,13 @@ import { getEncodingsReport, onEncodingsUpdate } from "./encodingReporter";
 const frontendAddress = "http://localhost:5005";
 const fakeVideo = "media/sample_video.mjpeg";
 const fakeAudio = "media/sample_audio.wav";
-const ENCODING_REPORT_PERIOD = 5;
-const INBOUD_TRACK_BANDWIDTH = 0.15 + 0.5 + 1.5;
-const OUTBOUND_TRACK_BANDWIDTH = 1.5;
+
+const encodingReportPeriod = 5;
+const encodingBitrate = new Map<TrackEncoding, number>([
+  ["l", 0.15],
+  ["m", 0.5],
+  ["h", 1.5],
+]);
 
 const second = 1000;
 const delay = (n: number) => {
@@ -24,7 +29,7 @@ export const runBenchmark = async (args: Args) => {
   console.log("Started all browsers, running benchmark");
 
   for (
-    let time = 0, step = ENCODING_REPORT_PERIOD;
+    let time = 0, step = encodingReportPeriod;
     time < args.duration;
     step = Math.min(step, args.duration - time), time += step
   ) {
@@ -52,7 +57,7 @@ const addPeers = async (args: Args) => {
   let browsers: Array<Browser> = [];
   let currentBrowser = await spawnBrowser(args.chromeExecutable);
 
-  const { incomingTracks, outgoingTracks } = getTrackNumber(args);
+  const { incomingBandwidth, outgoingBandwidth } = getEstimatedBandwidth(args);
 
   while (peersAdded < args.peers) {
     const roomId = await client.createRoom();
@@ -67,11 +72,7 @@ const addPeers = async (args: Args) => {
       peersAdded++, peersInCurrentBrowser++;
 
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${
-          args.peers
-        }  Expected network usage: Incoming ${
-          incomingTracks * INBOUD_TRACK_BANDWIDTH
-        } Mbit/s, Outgoing ${outgoingTracks * OUTBOUND_TRACK_BANDWIDTH} Mbit/s`,
+        `Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incomingBandwidth} Mbit/s, Outgoing ${outgoingBandwidth} Mbit/s`,
       );
       await delay(args.peerDelay);
 
@@ -139,7 +140,7 @@ const cleanup = async (client: Client, browsers: Array<Browser>) => {
   await client.purge();
 };
 
-const getTrackNumber = (args: Args) => {
+const getEstimatedBandwidth = (args: Args) => {
   const maxPeersInRoom = Math.min(args.peers, args.peersPerRoom);
   const fullRooms = Math.floor(args.peers / maxPeersInRoom);
   const peersInLastRoom = args.peers % args.peersPerRoom;
@@ -151,7 +152,15 @@ const getTrackNumber = (args: Args) => {
     fullRooms * args.activePeers * (maxPeersInRoom - 1) +
     activePeersInLastRoom * (peersInLastRoom - 1);
 
-  return { incomingTracks, outgoingTracks };
+  const outgoingBandwidth =
+    encodingBitrate.get(args.targetEncoding)! * outgoingTracks;
+
+  let incomingBandwidth = args.availableEncodings.reduce(
+    (acc, encoding) => acc + encodingBitrate.get(encoding)! * incomingTracks,
+    0,
+  );
+
+  return { incomingBandwidth, outgoingBandwidth };
 };
 
 const writeInPlace = (text: string) => {

@@ -6,6 +6,7 @@ import { startDevices } from "./mediaDevices";
 const startClient = () => {
   const params: QueryParams = parseQueryParams();
   const client = new JellyfishClient<PeerMetadata, TrackMetadata>();
+  const targetEncoding: TrackEncoding = process.env.TARGET_ENCODING as TrackEncoding;
 
   client.addListener("joined", () => {
     console.log("Joined");
@@ -16,6 +17,10 @@ const startClient = () => {
 
   client.addListener("trackReady", (trackContext) => {
     console.log("Track ready");
+
+    setTimeout(() => {
+      client.setTargetTrackEncoding(trackContext.trackId, targetEncoding);
+    }, 5000);
   });
 
   client.addListener("trackRemoved", (trackContext) => {
@@ -43,11 +48,13 @@ const startClient = () => {
 const addMediaTracks = (client: JellyfishClient<PeerMetadata, TrackMetadata>) => {
   const videoTrack = videoMediaStream.getVideoTracks()?.[0];
 
+  const activeEncodings: TrackEncoding[] = process.env.ACTIVE_ENCODINGS?.split("") as TrackEncoding[];
+
   client.addTrack(
     videoTrack,
     videoMediaStream,
     undefined,
-    { enabled: true, activeEncodings: ["l", "m", "h"] },
+    { enabled: true, activeEncodings: activeEncodings },
     new Map<TrackEncoding, number>([
       ["l", 150],
       ["m", 500],
@@ -68,11 +75,10 @@ const startEncodingLogging = (period: number) => {
     const trackEncodings = [];
 
     for (const trackId in tracks) {
-      const encoding = tracks[trackId].encoding;
+      const track = tracks[trackId];
 
-      trackEncodings.push(encoding);
-      if (encoding != "h") {
-        client.setTargetTrackEncoding(trackId, "h");
+      if (track.track?.kind == "video") {
+        trackEncodings.push(track.encoding);
       }
     }
 
