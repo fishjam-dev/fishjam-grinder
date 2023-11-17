@@ -146,19 +146,19 @@ const getEstimatedBandwidth = (args: Args) => {
   const peersInLastRoom = args.peers % args.peersPerRoom;
   const activePeersInLastRoom = Math.min(args.activePeers, peersInLastRoom);
 
-  const incoming_tracks = fullRooms * args.activePeers + activePeersInLastRoom;
+  const incomingTracks = fullRooms * args.activePeers + activePeersInLastRoom;
 
-  const outgoing_tracks =
+  const outgoingTracks =
     fullRooms * args.activePeers * (maxPeersInRoom - 1) +
     activePeersInLastRoom * (peersInLastRoom - 1);
 
   const outgoingBandwidth =
-    encodingBitrate.get(args.targetEncoding)! * incoming_tracks;
+    encodingBitrate.get(args.targetEncoding)! * outgoingTracks;
 
-  let incomingBandwidth = 0;
-  for (const encoding of args.availableEncodings) {
-    incomingBandwidth += encodingBitrate.get(encoding)! * incoming_tracks;
-  }
+  let incomingBandwidth = args.availableEncodings.reduce(
+    (acc, encoding) => acc + encodingBitrate.get(encoding)! * incomingTracks,
+    0,
+  );
 
   return { incomingBandwidth, outgoingBandwidth };
 };
