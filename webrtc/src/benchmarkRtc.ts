@@ -15,8 +15,9 @@ const encodingBitrate = new Map<TrackEncoding, number>([
   ["h", 1.5],
 ]);
 
-const delay = (s: number) => {
-  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
+const second = 1000;
+const delay = (n: number) => {
+  return new Promise((resolve) => setTimeout(resolve, n * second));
 };
 
 export const runBenchmark = async (args: Args) => {
@@ -27,26 +28,20 @@ export const runBenchmark = async (args: Args) => {
 
   console.log("Started all browsers, running benchmark");
 
-  const encodingReports = [];
-
-  let time = 0,
-    step = encodingReportPeriod;
-  while (true) {
-    await delay(step);
-    step = Math.min(step, args.duration - time);
-    time += step;
-
+  for (
+    let time = 0, step = encodingReportPeriod;
+    time < args.duration;
+    step = Math.min(step, args.duration - time), time += step
+  ) {
     const report = getEncodingsReport();
-    encodingReports.push({ ...report.toJson(), timestamp: time });
 
     writeInPlace(
-      `${time} / ${args.duration}s (${Math.floor(
-        time / args.duration,
-      )}), Encodings: ${report.toString()}}`,
+      `${time} / ${args.duration}s, Encodings: ${report.toString()}}`,
     );
-
-    if (time == args.duration) break;
+    await delay(step);
   }
+
+  writeInPlace(`${args.duration} / ${args.duration}s`);
 
   await cleanup(client, browsers);
 
@@ -62,6 +57,8 @@ const addPeers = async (args: Args) => {
   let browsers: Array<Browser> = [];
   let currentBrowser = await spawnBrowser(args.chromeExecutable);
 
+  const { incomingBandwidth, outgoingBandwidth } = getEstimatedBandwidth(args);
+
   while (peersAdded < args.peers) {
     const roomId = await client.createRoom();
 
@@ -74,9 +71,8 @@ const addPeers = async (args: Args) => {
       });
       peersAdded++, peersInCurrentBrowser++;
 
-      const { incoming, outgoing } = getEstimatedBandwidth(args);
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incoming} Mbit/s, Outgoing ${outgoing} Mbit/s`,
+        `Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming ${incomingBandwidth} Mbit/s, Outgoing ${outgoingBandwidth} Mbit/s`,
       );
       await delay(args.peerDelay);
 
@@ -140,10 +136,7 @@ const startPeer = async ({
 };
 
 const cleanup = async (client: Client, browsers: Array<Browser>) => {
-  for (const browser of browsers) {
-    browser.close();
-  }
-
+  browsers.forEach((browser) => browser.close());
   await client.purge();
 };
 
@@ -159,14 +152,15 @@ const getEstimatedBandwidth = (args: Args) => {
     fullRooms * args.activePeers * (maxPeersInRoom - 1) +
     activePeersInLastRoom * (peersInLastRoom - 1);
 
-  const outgoing = encodingBitrate.get(args.targetEncoding)! * incoming_tracks;
+  const outgoingBandwidth =
+    encodingBitrate.get(args.targetEncoding)! * incoming_tracks;
 
-  let incoming = 0;
+  let incomingBandwidth = 0;
   for (const encoding of args.availableEncodings) {
-    incoming += encodingBitrate.get(encoding)! * incoming_tracks;
+    incomingBandwidth += encodingBitrate.get(encoding)! * incoming_tracks;
   }
 
-  return { incoming, outgoing };
+  return { incomingBandwidth, outgoingBandwidth };
 };
 
 const writeInPlace = (text: string) => {

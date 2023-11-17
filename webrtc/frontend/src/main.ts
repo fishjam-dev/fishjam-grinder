@@ -1,109 +1,101 @@
 import "./style.css";
 import "./mediaDevices.ts";
 import { JellyfishClient, Peer, TrackEncoding } from "@jellyfish-dev/ts-client-sdk";
-import { videoMediaStream, startDevice, audioMediaStream } from "./mediaDevices";
+import { startDevices } from "./mediaDevices";
 
-await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-const devices = await navigator.mediaDevices.enumerateDevices();
+const startClient = () => {
+  const params: QueryParams = parseQueryParams();
+  const client = new JellyfishClient<PeerMetadata, TrackMetadata>();
+  const targetEncoding: TrackEncoding = process.env.TARGET_ENCODING as TrackEncoding;
 
-const videoDevice = devices.filter((device) => device.kind === "videoinput")[0];
-const audioDevice = devices.filter((device) => device.kind === "audioinput")[0];
+  client.addListener("joined", () => {
+    console.log("Joined");
+    if (params.activePeer) {
+      addMediaTracks(client);
+    }
+  });
 
-await startDevice(videoDevice.deviceId, "video");
-await startDevice(audioDevice.deviceId, "audio");
+  client.addListener("trackReady", (trackContext) => {
+    console.log("Track ready");
 
-console.log(`audio: ${JSON.stringify(audioDevice)}, video: ${JSON.stringify(videoDevice)}`);
+    setTimeout(() => {
+      client.setTargetTrackEncoding(trackContext.trackId, targetEncoding);
+    }, 5000);
+  });
 
-const urlSearchParams = new URLSearchParams(window.location.search);
-const params = Object.fromEntries(urlSearchParams.entries());
+  client.addListener("trackRemoved", (trackContext) => {
+    console.log("Track removed");
+  });
 
-const random_id = () => {
-  crypto.randomUUID();
+  client.addListener("disconnected", () => {
+    console.log("Disconnected");
+  });
+
+  client.connect({
+    token: params.peerToken,
+    signaling: {
+      host: process.env.JF_ADDR,
+      protocol: process.env.JF_PROTOCOL,
+    },
+    peerMetadata: {
+      name: `Kamil${crypto.randomUUID()}`,
+    },
+  });
+
+  return client;
 };
 
-type PeerMetadata = {
-  name: string;
+const addMediaTracks = (client: JellyfishClient<PeerMetadata, TrackMetadata>) => {
+  const videoTrack = videoMediaStream.getVideoTracks()?.[0];
+
+  const activeEncodings: TrackEncoding[] = process.env.ACTIVE_ENCODINGS?.split("") as TrackEncoding[];
+
+  client.addTrack(
+    videoTrack,
+    videoMediaStream,
+    undefined,
+    { enabled: true, activeEncodings: activeEncodings },
+    new Map<TrackEncoding, number>([
+      ["l", 150],
+      ["m", 500],
+      ["h", 1500],
+    ]),
+  );
+  console.log("Added video");
+
+  const audioTrack = audioMediaStream.getAudioTracks()?.[0];
+
+  client.addTrack(audioTrack, audioMediaStream);
+  console.log("Added audio");
 };
 
-type TrackMetadata = {
-  type: "camera" | "microphone" | "screenshare";
-};
+const startEncodingLogging = (period: number) => {
+  setInterval(() => {
+    const tracks = client.getRemoteTracks();
+    const trackEncodings = [];
 
-const activeEncodings: TrackEncoding[] = process.env.ACTIVE_ENCODINGS?.split("") as TrackEncoding[];
-const targetEncoding: TrackEncoding = process.env.TARGET_ENCODING as TrackEncoding;
+    for (const trackId in tracks) {
+      const track = tracks[trackId];
 
-export const client = new JellyfishClient<PeerMetadata, TrackMetadata>();
-
-client.addListener("joined", (peerId: string, peers: Peer[]) => {
-  console.log("joined");
-
-  if (params.activePeer === "true") {
-    if (!videoMediaStream) throw Error("Video stram is empty!");
-    const vidoeTrack = videoMediaStream.getVideoTracks()?.[0];
-    if (!vidoeTrack) throw Error("Media stream has no video track!");
-
-    client.addTrack(
-      vidoeTrack,
-      videoMediaStream,
-      undefined,
-      { enabled: true, activeEncodings: activeEncodings },
-      new Map<TrackEncoding, number>([
-        ["l", 150],
-        ["m", 500],
-        ["h", 1500],
-      ]),
-    );
-
-    console.log("Added video");
-
-    if (!audioMediaStream) throw Error("Audio strem is empty!");
-    const audoiTrack = audioMediaStream.getAudioTracks()?.[0];
-    if (!audoiTrack) throw Error("Media stream has no audio track!");
-
-    client.addTrack(audoiTrack, audioMediaStream);
-    console.log("Added audio");
-  }
-});
-
-client.addListener("disconnected", () => {
-  console.log("disconnected");
-});
-
-const token = params.peerToken;
-
-client.connect({
-  token: token,
-  signaling: {
-    host: process.env.JF_ADDR,
-    protocol: process.env.JF_PROTOCOL,
-  },
-  peerMetadata: {
-    name: `Kamil${random_id()}`,
-  },
-});
-
-client.addListener("trackReady", (trackContext) => {
-  console.log("Track ready");
-});
-
-client.addListener("trackRemoved", (trackContext) => {
-  console.log("Track removed");
-});
-
-setInterval(() => {
-  const tracks = client.getRemoteTracks();
-  const trackEncodings = [];
-
-  for (const trackId in tracks) {
-    if (tracks[trackId].track?.kind == "video") {
-      const encoding = tracks[trackId].encoding;
-
-      trackEncodings.push(encoding);
-      if (encoding != targetEncoding) {
-        client.setTargetTrackEncoding(trackId, targetEncoding);
+      if (track.track?.kind == "video") {
+        trackEncodings.push(track.encoding);
       }
     }
-  }
 
-  console.log(`trackEncodings: ${trackEncodings}`);
-}, 5000);
+    console.log(`trackEncodings: ${trackEncodings}`);
+  }, period);
+};
+
+const parseQueryParams = () => {
+  const urlSearchParams = new URLSearchParams(window.location.search);
+  const params = Object.fromEntries(urlSearchParams.entries());
+
+  return {
+    peerToken: params.peerToken,
+    activePeer: params.activePeer === "true",
+  };
+};
+
+const [audioMediaStream, videoMediaStream] = await startDevices();
+const client = startClient();
+startEncodingLogging(5000);

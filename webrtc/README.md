@@ -6,7 +6,7 @@ Utility for running WebRTC stress-tests against [the Jellyfish Media Server](htt
 
 Make sure to have installed [Node](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) first.
 
-Run `npm setup`.
+Run `npm run setup`.
 
 Ensure Chrome installation:
 `npm run install-chrome`

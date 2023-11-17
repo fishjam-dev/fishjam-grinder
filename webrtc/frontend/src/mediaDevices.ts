@@ -1,24 +1,26 @@
 import { AUDIO_TRACK_CONSTRAINTS, VIDEO_TRACK_CONSTRAINTS } from "./constraints";
 
-export let videoMediaStream: MediaStream | null = null;
-export let audioMediaStream: MediaStream | null = null;
+export const startDevices = async () => {
+  await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+  const devices = await navigator.mediaDevices.enumerateDevices();
 
-const LAST_SELECTED_VIDEO_DEVICE_ID_KEY = "last-selected-video-device-id";
-const LAST_SELECTED_AUDIO_DEVICE_ID_KEY = "last-selected-audio-device-id";
+  let mediaStreams: MediaStream[] = [];
 
-export const startDevice = async (deviceId: string, type: "audio" | "video") => {
-  localStorage.setItem(
-    type === "video" ? LAST_SELECTED_VIDEO_DEVICE_ID_KEY : LAST_SELECTED_AUDIO_DEVICE_ID_KEY,
-    deviceId,
-  );
+  for (const kind of ["audio", "video"]) {
+    const device = devices.filter((device) => device.kind === `${kind}input`)[0];
+    console.log(`${kind} device: ${JSON.stringify(device)}`);
 
+    const stream = await startDevice(device.deviceId, kind as MediaKind);
+    mediaStreams.push(stream);
+  }
+
+  return mediaStreams;
+};
+
+const startDevice = async (deviceId: string, type: MediaKind) => {
   const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
     [type]: { deviceId: deviceId, ...(type === "video" ? VIDEO_TRACK_CONSTRAINTS : AUDIO_TRACK_CONSTRAINTS) },
   });
 
-  if (type === "video") {
-    videoMediaStream = stream;
-  } else {
-    audioMediaStream = stream;
-  }
+  return stream;
 };

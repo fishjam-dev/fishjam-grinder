@@ -1,3 +1,5 @@
+import { JellyfishConfig } from "./types";
+
 const { createServer } = require("vite");
 
 import { TrackEncoding } from "@jellyfish-dev/ts-client-sdk";
@@ -7,12 +9,7 @@ export const startServer = async ({
   secure,
   targetEncoding,
   activeEncodings,
-}: {
-  jellyfishAddress: string;
-  secure: boolean;
-  targetEncoding: TrackEncoding;
-  activeEncodings: TrackEncoding[];
-}) => {
+}: JellyfishConfig) => {
   const server = await createServer({
     configFile: false,
     root: "./frontend",
