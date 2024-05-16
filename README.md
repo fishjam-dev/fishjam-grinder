@@ -1,4 +1,4 @@
-# Jellygrinder
+# Fishjam Grinder
 
 Utilities for running stress-tests against [the Fishjam Media Server](https://github.com/fishjam-dev/fishjam).
 

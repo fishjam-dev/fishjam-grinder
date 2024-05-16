@@ -1,4 +1,4 @@
-# Jellygrinder HLS
+# Fishjam Grinder HLS
 
 Utility for running HLS and LL-HLS stress-tests against [the Fishjam Media Server](https://github.com/fishjam-dev/fishjam)
 
