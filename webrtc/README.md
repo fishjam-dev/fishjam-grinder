@@ -1,6 +1,6 @@
 # Fishjam Grinder WebRTC
 
-Utility for running WebRTC stress-tests against [the Fishjam Media Server](https://github.com/fishjam-dev/fishjam)
+Utility for running WebRTC stress-tests against [Fishjam Media Server](https://github.com/fishjam-dev/fishjam).
 
 ## Installation
 
