@@ -13,7 +13,7 @@ Ensure Chrome installation:
 The installation directory will vary, depending on the OS.
 
 Generate latest Jellyfish Server SDK client:
-`npx @openapitools/openapi-generator-cli generate -i https://raw.githubusercontent.com/jellyfish-dev/jellyfish/main/openapi.yaml -g typescript-axios -o ./jellyfish-client`
+`npx @openapitools/openapi-generator-cli generate -i https://raw.githubusercontent.com/jellyfish-dev/jellyfish/main/openapi.yaml -g typescript-axios -o ./server-sdk`
 
 ## Usage
 
