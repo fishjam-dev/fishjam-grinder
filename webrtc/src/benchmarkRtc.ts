@@ -77,7 +77,11 @@ const addPeers = async (args: Args) => {
       peersAdded++, peersInCurrentBrowser++;
 
       writeInPlace(
-        `Browsers launched: ${peersAdded} / ${args.peers}  Expected network usage: Incoming/Outgoing ${incomingBandwidth}/${outgoingBandwidth} Mbps/s,  ${incomingBandwidth / 8}/${outgoingBandwidth / 8} MBps/s`,
+        `Browsers launched: ${peersAdded} / ${
+          args.peers
+        }  Expected network usage: Incoming/Outgoing ${incomingBandwidth}/${outgoingBandwidth} Mbps/s,  ${
+          incomingBandwidth / 8
+        }/${outgoingBandwidth / 8} MBps/s`,
       );
       await delay(args.peerDelay);
 
