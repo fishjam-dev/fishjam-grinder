@@ -65,7 +65,6 @@ const addPeers = async (args: Args) => {
       `room${String(roomCount).padStart(2, "0")}`,
     );
     roomCount++;
-    // await client.addHls(response.room.id);
 
     for (let j = 0; j < args.peersPerRoom && peersAdded < args.peers; j++) {
       await startPeer({
